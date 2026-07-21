@@ -13,6 +13,12 @@ backend/.venv/
 frontend/node_modules/
 frontend/dist/
 
+# NOTA: backend/app/static/ SÍ se commitea a propósito: es el build del
+# frontend ya compilado, necesario para el despliegue manual "Git externo"
+# en Azure (no hay paso de build de Node en ese flujo). Recompilar con
+# `cd frontend && npm run build` y copiar a backend/app/static antes de
+# cada sync a Azure si cambia el frontend.
+
 # Sistema
 Thumbs.db
 .DS_Store

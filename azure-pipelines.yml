@@ -1,0 +1,91 @@
+# Pipeline de CI/CD para el Portal de Calidad KOS.
+# Compila el frontend (React + Vite), lo copia dentro del backend (FastAPI)
+# y despliega TODO junto a un único Azure App Service (Linux).
+#
+# Pasos previos obligatorios en Azure DevOps antes de correr esto:
+#   1. Project Settings > Service connections > New service connection >
+#      "Azure Resource Manager" -> autorizar la suscripción donde está el
+#      App Service. Copiar el NOMBRE que le des y pegarlo abajo en
+#      `azureSubscription`.
+#   2. Reemplazar `webAppName` por el nombre real del App Service (Azure Portal
+#      > tu App Service > "Nombre", NO la URL completa).
+#   3. En el App Service (Azure Portal): Configuration > Application settings
+#      > agregar SCM_DO_BUILD_DURING_DEPLOYMENT = true (para que Azure instale
+#      las dependencias de requirements.txt al desplegar).
+#   4. En el App Service: Configuration > General settings > Startup Command:
+#      gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0 --timeout 600
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  azureSubscription: 'NOMBRE-DE-TU-SERVICE-CONNECTION'   # <-- reemplazar
+  webAppName: 'NOMBRE-DE-TU-APP-SERVICE'                 # <-- reemplazar
+  frontendDir: 'kos-calidad-portal/frontend'
+  backendDir: 'kos-calidad-portal/backend'
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildFrontendAndBackend
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+            displayName: 'Instalar Node.js'
+
+          - script: |
+              npm ci
+              npm run build
+            workingDirectory: '$(frontendDir)'
+            displayName: 'Compilar frontend (npm ci && npm run build)'
+            env:
+              # Vacío = el frontend llama a la API por ruta relativa (mismo origen,
+              # ya que backend y frontend quedan en el mismo App Service).
+              VITE_API_URL: ''
+
+          - task: CopyFiles@2
+            inputs:
+              SourceFolder: '$(frontendDir)/dist'
+              Contents: '**'
+              TargetFolder: '$(backendDir)/app/static'
+            displayName: 'Copiar build del frontend dentro del backend'
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: '$(backendDir)'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/backend.zip'
+              replaceExistingArchive: true
+            displayName: 'Empaquetar backend + estaticos en zip'
+
+          - publish: '$(Build.ArtifactStagingDirectory)/backend.zip'
+            artifact: backend-package
+            displayName: 'Publicar artefacto'
+
+  - stage: Deploy
+    dependsOn: Build
+    jobs:
+      - deployment: DeployToAppService
+        displayName: 'Desplegar a Azure App Service'
+        environment: 'production'
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appType: 'webAppLinux'
+                    appName: '$(webAppName)'
+                    package: '$(Pipeline.Workspace)/backend-package/backend.zip'
+                    runtimeStack: 'PYTHON|3.11'
+                  displayName: 'Deploy a Azure App Service'

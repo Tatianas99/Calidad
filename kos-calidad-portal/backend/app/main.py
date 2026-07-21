@@ -1,8 +1,10 @@
 """Punto de entrada de la API del Portal de Calidad KOS Colombia."""
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from fastapi import Depends
 
@@ -49,3 +51,9 @@ app.include_router(f006.router, dependencies=_auth)
 app.include_router(f015.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
 app.include_router(usuarios.router)  # ya exige permiso gestionar_usuarios internamente
+
+# Build del frontend (frontend/dist copiado aquí en el pipeline de despliegue).
+# Se monta al final para que las rutas de la API definidas arriba tengan prioridad.
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="frontend")

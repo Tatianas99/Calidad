@@ -1,7 +1,11 @@
 import { enqueue, processQueue } from './queue'
 import { getToken, triggerUnauthorized, type Usuario } from './auth'
 
-const API: string = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
+// Cadena vacía = mismo origen (backend y frontend en el mismo App Service).
+const API: string =
+  import.meta.env.VITE_API_URL !== undefined
+    ? (import.meta.env.VITE_API_URL as string)
+    : 'http://localhost:8000'
 
 export function apiBaseUrl() {
   return API
