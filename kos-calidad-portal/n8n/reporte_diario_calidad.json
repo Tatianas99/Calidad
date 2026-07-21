@@ -1,0 +1,108 @@
+{
+  "name": "KOS Calidad - Reporte diario (F-006 y F-015)",
+  "active": false,
+  "settings": {},
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 22 * * *" }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Agenda (fin de día 22:00)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-360, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.KOS_API_URL }}/reports/f006?fecha={{ $now.toFormat('yyyy-MM-dd') }}&formato=xlsx",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "f006"
+            }
+          }
+        }
+      },
+      "id": "http-f006",
+      "name": "Descargar reporte F-006 (xlsx)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-120, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.KOS_API_URL }}/reports/f015?fecha={{ $now.toFormat('yyyy-MM-dd') }}&formato=xlsx",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "f015"
+            }
+          }
+        }
+      },
+      "id": "http-f015",
+      "name": "Descargar reporte F-015 (xlsx)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-120, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "merge-reportes",
+      "name": "Combinar adjuntos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [140, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "calidad@koscolombia.com",
+        "toEmail": "calidad@koscolombia.com, jefatura@koscolombia.com",
+        "subject": "=Reporte de calidad {{ $now.toFormat('yyyy-MM-dd') }} (F-006 y F-015)",
+        "emailFormat": "html",
+        "html": "=<p>Adjunto el consolidado de calidad del día <b>{{ $now.toFormat('yyyy-MM-dd') }}</b>:</p><ul><li>F-006 Ruta control proceso vasos</li><li>F-015 Medición de cloro y PH del agua</li></ul><p>Generado automáticamente por el Portal de Calidad.</p>",
+        "options": {
+          "attachments": "f006,f015"
+        }
+      },
+      "id": "email-send",
+      "name": "Enviar por correo (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [400, 300],
+      "credentials": {
+        "smtp": { "id": "REEMPLAZAR", "name": "SMTP KOS" }
+      }
+    }
+  ],
+  "connections": {
+    "Agenda (fin de día 22:00)": {
+      "main": [
+        [
+          { "node": "Descargar reporte F-006 (xlsx)", "type": "main", "index": 0 },
+          { "node": "Descargar reporte F-015 (xlsx)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Descargar reporte F-006 (xlsx)": {
+      "main": [[{ "node": "Combinar adjuntos", "type": "main", "index": 0 }]]
+    },
+    "Descargar reporte F-015 (xlsx)": {
+      "main": [[{ "node": "Combinar adjuntos", "type": "main", "index": 1 }]]
+    },
+    "Combinar adjuntos": {
+      "main": [[{ "node": "Enviar por correo (SMTP)", "type": "main", "index": 0 }]]
+    }
+  }
+}

@@ -1,0 +1,59 @@
+# ==========================================================
+#  Portal de Calidad — KOS Colombia
+#  .gitignore (raíz del repositorio: CALIDAD DIG)
+# ==========================================================
+
+# --- Secretos y variables de entorno -----------------------
+# NUNCA subir credenciales (Azure SQL, SMTP, etc.)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# --- Formatos fuente Office (referencia, no van al repo) ---
+*.xlsx
+*.xls
+*.docx
+*.doc
+*.pdf
+~$*
+
+# --- Python / Backend --------------------------------------
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Bases de datos locales (SQLite de desarrollo)
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Node / Frontend ---------------------------------------
+**/node_modules/
+**/dist/
+**/build/
+.vite/
+*.tsbuildinfo
+
+# --- Procesos / servidores en ejecución --------------------
+*.pid
+*.log
+
+# --- Editores / IDE / Herramientas -------------------------
+.vscode/
+.idea/
+*.swp
+.claude/
+
+# --- Sistema operativo -------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
