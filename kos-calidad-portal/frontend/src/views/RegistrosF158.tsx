@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { apiGet, apiSend, apiBaseUrl } from '../lib/api'
+import { apiGet, apiSend, fileUrl } from '../lib/api'
 import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
@@ -108,10 +108,10 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
           <div className="adj-grid">
             {r.adjuntos.map((a) => (
               a.tipo === 'video' ? (
-                <video key={a.id} className="adj-media" src={apiBaseUrl() + a.url} controls preload="metadata" />
+                <video key={a.id} className="adj-media" src={fileUrl(a.url)} controls preload="metadata" />
               ) : (
-                <a key={a.id} href={apiBaseUrl() + a.url} target="_blank" rel="noreferrer">
-                  <img className="adj-media" src={apiBaseUrl() + a.url} alt={a.nombre} loading="lazy" />
+                <a key={a.id} href={fileUrl(a.url)} target="_blank" rel="noreferrer">
+                  <img className="adj-media" src={fileUrl(a.url)} alt={a.nombre} loading="lazy" />
                 </a>
               )
             ))}

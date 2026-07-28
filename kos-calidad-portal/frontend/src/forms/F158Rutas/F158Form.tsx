@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiGet, apiMutate, apiSend, apiBaseUrl } from '../../lib/api'
+import { apiGet, apiMutate, apiSend, fileUrl } from '../../lib/api'
 import { useDraft } from '../../lib/draft'
 import { uuid } from '../../lib/uuid'
 import { getUser } from '../../lib/auth'
@@ -473,7 +473,7 @@ function EntradaDetalle({
         {(pend.length > 0 || entrada.subidos.length > 0) && (
           <div className="adj-grid">
             {entrada.subidos.map((a) => (
-              <a key={a.id} className="adj-chip" href={apiBaseUrl() + a.url} target="_blank" rel="noreferrer">
+              <a key={a.id} className="adj-chip" href={fileUrl(a.url)} target="_blank" rel="noreferrer">
                 {a.tipo === 'video' ? '🎬' : '🖼'} {a.nombre}
               </a>
             ))}

@@ -7,3 +7,6 @@ python-dotenv>=1.0
 openpyxl>=3.1
 # Solo requerido para SQL Server / Azure SQL en producción (necesita el ODBC Driver 18):
 pyodbc>=5.1
+# Adjuntos (fotos/videos) en Azure Data Lake, con identidad administrada:
+azure-storage-blob>=12.19
+azure-identity>=1.16

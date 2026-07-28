@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 
 from fastapi import Depends
 
-from .config import CORS_ORIGINS
+from . import storage
+from .config import CORS_ORIGINS, UPLOADS_DIR
 from .db import init_db, SessionLocal
 from .auth import get_current_user
 from .personal import sync_personas
@@ -22,6 +23,7 @@ log = logging.getLogger("uvicorn.error")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()  # crea tablas si no existen (dev/arranque)
+    storage.preparar()  # contenedor de adjuntos (Azure) o carpeta local
     # Sincroniza el catálogo de personas desde kos_apps.personal_planta.
     # Best-effort: si la base de personal no está disponible, el portal arranca
     # igual con el último catálogo sincronizado.
@@ -52,10 +54,13 @@ app.add_middleware(
     allow_credentials=False,
 )
 
-# Archivos subidos (fotos/videos de F-158). Se sirven en /uploads/…
-_UPLOADS = Path(__file__).resolve().parents[1] / "uploads"
-_UPLOADS.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(_UPLOADS)), name="uploads")
+# Archivos subidos (fotos/videos de F-158). En producción viven en Azure Data
+# Lake y el navegador los descarga directo con un enlace temporal, así que aquí
+# no hay nada que servir. Solo en desarrollo (sin AZURE_STORAGE_ACCOUNT) se
+# guardan en disco y se exponen en /uploads/…
+if not storage.usa_azure():
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 @app.get("/health", tags=["Salud"])

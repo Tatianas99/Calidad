@@ -86,6 +86,52 @@ CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if 
 PH_MIN, PH_MAX = 6.5, 8.5
 CLORO_MIN, CLORO_MAX = 0.3, 2.0
 
+# --------------------------------------------------------------------------- #
+# Almacenamiento de adjuntos (fotos/videos de los formatos)
+# --------------------------------------------------------------------------- #
+# Nombre de la cuenta de Azure Data Lake / Blob Storage. Si está definida, los
+# adjuntos van a Azure; si no, se guardan en backend/uploads/ (desarrollo).
+# En producción es obligatoria: el disco del App Service se borra en cada
+# despliegue. La autenticación es por identidad administrada, sin claves aquí.
+def _parse_conn_str(cs: str) -> dict:
+    """Descompone una cadena de conexión de Azure Storage en sus partes."""
+    partes = {}
+    for trozo in cs.split(";"):
+        if "=" in trozo:
+            k, v = trozo.split("=", 1)
+            partes[k.strip().lower()] = v.strip()
+    return partes
+
+
+_cuenta = (os.getenv("AZURE_STORAGE_ACCOUNT") or "").strip()
+_conn = (os.getenv("AZURE_STORAGE_CONNECTION_STRING") or "").strip()
+
+# Si en AZURE_STORAGE_ACCOUNT pegaron la cadena de conexión entera en vez del
+# nombre de la cuenta, se acepta igual: se saca el nombre (y la clave) de ahí en
+# lugar de fallar con un error difícil de entender.
+if "accountname=" in _cuenta.lower():
+    _conn = _conn or _cuenta
+    _cuenta = ""
+
+_partes = _parse_conn_str(_conn) if _conn else {}
+
+AZURE_STORAGE_ACCOUNT = _cuenta or _partes.get("accountname") or None
+# Clave de la cuenta: solo si se configuró una cadena de conexión. Con identidad
+# administrada queda en None, que es el modo recomendado (sin secretos).
+AZURE_STORAGE_KEY = _partes.get("accountkey")
+AZURE_STORAGE_CONTAINER = os.getenv("AZURE_STORAGE_CONTAINER", "adjuntos")
+_sufijo = _partes.get("endpointsuffix", "core.windows.net")
+AZURE_STORAGE_URL = (
+    os.getenv("AZURE_STORAGE_URL")
+    or (f"https://{AZURE_STORAGE_ACCOUNT}.blob.{_sufijo}" if AZURE_STORAGE_ACCOUNT else "")
+)
+# Validez (segundos) de los enlaces temporales de descarga. 1 hora alcanza para
+# revisar un recorrido; si un video queda abierto más tiempo, basta con recargar.
+SAS_TTL = int(os.getenv("SAS_TTL", "3600"))
+
+# Carpeta local de adjuntos (modo desarrollo, y caché de nada más).
+UPLOADS_DIR = _ROOT / "backend" / "uploads"
+
 # Secreto para firmar tokens de sesión (cambiar en producción vía variable de entorno).
 SECRET_KEY = os.getenv("SECRET_KEY", "kos-calidad-dev-secret-CAMBIAR-EN-PRODUCCION")
 # Duración del token de sesión (segundos). 30 días para no cortar turnos largos.

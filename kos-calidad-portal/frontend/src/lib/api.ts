@@ -21,6 +21,14 @@ export function apiBaseUrl() {
   return API
 }
 
+// URL de un adjunto (foto/video). El backend devuelve una URL absoluta y
+// temporal cuando el archivo está en Azure Data Lake, o una ruta relativa
+// (/uploads/...) cuando corre en modo desarrollo con disco local. En el primer
+// caso hay que usarla tal cual: anteponerle el host del API la rompería.
+export function fileUrl(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : API + url
+}
+
 function authHeaders(extra?: Record<string, string>): Record<string, string> {
   const h: Record<string, string> = { ...(extra || {}) }
   const t = getToken()

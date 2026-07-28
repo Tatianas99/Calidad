@@ -15,23 +15,21 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from .. import models, schemas
+from .. import models, schemas, storage
 from ..auth import get_current_user, require_admin
 from ..timeutil import now_co, today_co, fecha_fields
 from ..constants_f158 import config_f158, PROCESOS_KEYS
 
 router = APIRouter(prefix="/f158", tags=["F-158 Rutas Calidad"])
 
-# Carpeta donde se guardan las fotos/videos (se sirve como estático en /uploads).
-UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads" / "f158"
 MAX_BYTES = 30 * 1024 * 1024  # 30 MB por archivo
 
 
 def _out(reg: models.F158Recorrido) -> schemas.F158RecorridoOut:
     data = schemas.F158RecorridoOut.model_validate(reg)
-    # Completa la URL pública de cada adjunto.
+    # Completa la URL de descarga de cada adjunto (temporal si está en Azure).
     for src, dst in zip(reg.adjuntos, data.adjuntos):
-        dst.url = f"/uploads/{src.ruta}"
+        dst.url = storage.url(src.ruta)
     return data
 
 
@@ -187,27 +185,27 @@ def subir_adjunto(
     if len(blob) > MAX_BYTES:
         raise HTTPException(status_code=413, detail="El archivo supera 30 MB")
 
-    carpeta = UPLOAD_DIR / recorrido_id
-    carpeta.mkdir(parents=True, exist_ok=True)
     safe = Path(data.nombre).name or "archivo"
-    # Nombre corto en disco: evita superar el límite de ruta de Windows
+    # Nombre corto de archivo: evita superar el límite de ruta de Windows
     # (MAX_PATH = 260), que con nombres largos (fotos de WhatsApp/capturas) y la
     # ruta larga de OneDrive hacía fallar la escritura. El nombre original se
     # conserva en la columna `nombre` solo para mostrarlo.
     ext = Path(safe).suffix.lower() or (".mp4" if data.tipo == "video" else ".jpg")
     fname = f"{_uuidlib.uuid4().hex[:12]}{ext}"
-    (carpeta / fname).write_bytes(blob)
+    tipo = "video" if data.tipo == "video" else "image"
 
     ruta_rel = f"f158/{recorrido_id}/{fname}"
+    storage.guardar(ruta_rel, blob, tipo)
+
     adj = models.F158Adjunto(
         recorrido_id=recorrido_id,
         nombre=safe,
-        tipo="video" if data.tipo == "video" else "image",
+        tipo=tipo,
         ruta=ruta_rel,
     )
     db.add(adj)
     db.commit()
     db.refresh(adj)
     out = schemas.F158AdjuntoOut.model_validate(adj)
-    out.url = f"/uploads/{ruta_rel}"
+    out.url = storage.url(ruta_rel)
     return out
