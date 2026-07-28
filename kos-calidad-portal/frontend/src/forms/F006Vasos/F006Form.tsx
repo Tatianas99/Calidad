@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { apiGet, apiMutate } from '../../lib/api'
 import { useDraft } from '../../lib/draft'
 import { uuid } from '../../lib/uuid'
+import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
 import ChecklistCNCNA from '../../components/ChecklistCNCNA'
 import OptionButtons from '../../components/OptionButtons'
 import ReferenceSearch from '../../components/ReferenceSearch'
-import type { Referencia, Maquina, Persona, Opciones, Option } from '../../lib/types'
+import SearchSelect from '../../components/SearchSelect'
+import type { Referencia, Maquina, Persona, Opciones, Option, F006Registro } from '../../lib/types'
 
 const FILT_MS = 20 * 60 * 1000 // 20 minutos
 type Tab = 'pe' | 'filt' | 'firmas'
@@ -25,6 +27,11 @@ type LocalFiltracion = {
 type Producto = {
   registroId: string
   referencia_id?: number
+  marca?: string
+  altura_vaso?: string
+  diametro_superior?: string
+  diametro_inferior?: string
+  grueso_rim?: string
   fecha: string
   maquina_id?: number
   turno?: number
@@ -47,7 +54,13 @@ const labelOf = (opts: Option[], v?: string) => opts.find((o) => o.value === v)?
 const hhmm = (ms: number) =>
   new Date(ms).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
 
-export default function F006Form({ onExit }: { onExit: () => void }) {
+export default function F006Form({
+  onExit, editarId, onEditarConsumido,
+}: {
+  onExit: () => void
+  editarId?: string | null
+  onEditarConsumido?: () => void
+}) {
   const [refs, setRefs] = useState<Referencia[]>([])
   const [maqs, setMaqs] = useState<Maquina[]>([])
   const [personas, setPersonas] = useState<Persona[]>([])
@@ -67,6 +80,51 @@ export default function F006Form({ onExit }: { onExit: () => void }) {
     apiGet<Opciones>('/catalogos/opciones').then(setOpts).catch(() => {})
   }, [])
 
+  // Edición pedida desde "Ver registros F-006": recarga el registro como producto
+  // editable del turno (reutiliza los mismos PUT de cabecera/embalaje/firmas).
+  useEffect(() => {
+    if (!editarId) return
+    apiGet<F006Registro>(`/f006/registros/${editarId}`)
+      .then((r) => {
+        setSt((s) => {
+          if (s.productos.some((p) => p.registroId === r.id)) return { ...s, seleccionadoId: r.id }
+          const prod: Producto = {
+            registroId: r.id,
+            referencia_id: r.referencia_id,
+            marca: r.marca ?? undefined,
+            altura_vaso: r.altura_vaso ?? undefined,
+            diametro_superior: r.diametro_superior ?? undefined,
+            diametro_inferior: r.diametro_inferior ?? undefined,
+            grueso_rim: r.grueso_rim ?? undefined,
+            fecha: r.fecha,
+            maquina_id: r.maquina_id,
+            turno: r.turno,
+            guardado: true,
+            embalaje: Object.fromEntries(r.embalaje.map((e) => [e.item, e.resultado])),
+            filtraciones: r.filtraciones.map((f) => ({
+              id: f.id,
+              tipo_prueba: f.tipo_prueba,
+              tipo_material: f.tipo_material,
+              cantidad_muestra: f.cantidad_muestra,
+              montadaEnMs: new Date(f.hora_montaje).getTime(),
+              estado: f.estado,
+              cantidad_cumple: f.cantidad_cumple ?? undefined,
+              cantidad_nocumple: f.cantidad_nocumple ?? undefined,
+              comentario: f.comentario ?? undefined,
+            })),
+            auxiliar_id: r.auxiliar_id ?? undefined,
+            operario_id: r.operario_id ?? undefined,
+            empacador_id: r.empacador_id ?? undefined,
+            createdAt: Date.now(),
+          }
+          return { ...s, productos: [...s.productos, prod], seleccionadoId: r.id }
+        })
+      })
+      .catch(() => {})
+      .finally(() => onEditarConsumido?.())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editarId])
+
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(t)
@@ -79,6 +137,9 @@ export default function F006Form({ onExit }: { onExit: () => void }) {
     const r = refs.find((x) => x.id === id)
     return r ? (r.descripcion ? `${r.codigo} · ${r.descripcion}` : r.codigo) : 'Producto nuevo'
   }
+  // Etiqueta del producto: referencia + marca (usar en todas las secciones).
+  const prodLabel = (p: { referencia_id?: number; marca?: string }) =>
+    refLabel(p.referencia_id) + (p.marca ? ` ${p.marca}` : '')
   const maqLabel = (id?: number) => maqs.find((m) => m.id === id)?.nombre ?? ''
 
   const mapProd = (id: string, fn: (p: Producto) => Producto) =>
@@ -105,7 +166,12 @@ export default function F006Form({ onExit }: { onExit: () => void }) {
 
   async function maybeGuardarCabecera(prod: Producto) {
     if (!prod.referencia_id || !prod.maquina_id || !prod.turno) return
-    const body = { referencia_id: prod.referencia_id, fecha: prod.fecha, maquina_id: prod.maquina_id, turno: prod.turno }
+    const body = {
+      referencia_id: prod.referencia_id, marca: prod.marca ?? null, fecha: prod.fecha,
+      maquina_id: prod.maquina_id, turno: prod.turno,
+      altura_vaso: prod.altura_vaso ?? null, diametro_superior: prod.diametro_superior ?? null,
+      diametro_inferior: prod.diametro_inferior ?? null, grueso_rim: prod.grueso_rim ?? null,
+    }
     if (!prod.guardado) {
       patchProd(prod.registroId, { guardado: true }) // optimista (POST idempotente)
       const r = await apiMutate('POST', '/f006/registros', { id: prod.registroId, ...body })
@@ -206,10 +272,9 @@ export default function F006Form({ onExit }: { onExit: () => void }) {
                   className={'prod-item' + (p.registroId === st.seleccionadoId ? ' sel' : '')}
                   onClick={() => setSt((s) => ({ ...s, seleccionadoId: p.registroId }))}
                 >
-                  <span className={'dotmini' + (p.guardado ? '' : ' pend')} title={p.guardado ? 'guardado' : 'sin guardar'} />
-                  <span className="pt">{refLabel(p.referencia_id)}</span>
+                  <span className="pt">{prodLabel(p)}</span>
                   <span className="pm">
-                    {p.maquina_id ? maqLabel(p.maquina_id) : 'Sin máquina'} · {p.turno ? `T${p.turno}` : 'sin turno'} · {p.filtraciones.length} prueba(s)
+                    {p.maquina_id ? maqLabel(p.maquina_id) : 'Sin máquina'} · {p.turno ? `T${p.turno}` : 'sin turno'} · {p.filtraciones.length} prueba(s){p.guardado ? '' : ' · sin guardar'}
                   </span>
                   {listas.length > 0 ? (
                     <span className="prod-alert urgente">⏱ {listas.length} por registrar</span>
@@ -217,10 +282,10 @@ export default function F006Form({ onExit }: { onExit: () => void }) {
                     <span className="prod-alert">{enProceso.length} en proceso</span>
                   ) : null}
                   <span
-                    className="pm"
-                    style={{ position: 'absolute', bottom: 6, right: 10, cursor: 'pointer' }}
+                    className="quitar-x"
+                    title="Quitar de la lista"
                     onClick={(e) => { e.stopPropagation(); quitarProducto(p.registroId) }}
-                  >✕ quitar</span>
+                  >×</span>
                 </button>
               )
             })}
@@ -244,6 +309,7 @@ export default function F006Form({ onExit }: { onExit: () => void }) {
               now={now}
               refLabel={refLabel}
               onCabecera={(patch) => cambiarCabecera(selected, patch)}
+              onPatch={(patch) => patchProd(selected.registroId, patch)}
               onEmbalaje={(item, r) => cambiarEmbalaje(selected.registroId, item, r)}
               onMontar={(tp, tm, c) => montarFiltracion(selected.registroId, tp, tm, c)}
               onResultado={(f, c, com) => registrarResultado(selected.registroId, f, c, com)}
@@ -260,7 +326,7 @@ export default function F006Form({ onExit }: { onExit: () => void }) {
 }
 
 function ProductoDetalle({
-  prod, refs, maqs, personas, opts, now, refLabel, onCabecera, onEmbalaje, onMontar, onResultado, onFirmas, onFinalizar,
+  prod, refs, maqs, personas, opts, now, refLabel, onCabecera, onPatch, onEmbalaje, onMontar, onResultado, onFirmas, onFinalizar,
 }: {
   prod: Producto
   refs: Referencia[]
@@ -270,6 +336,7 @@ function ProductoDetalle({
   now: number
   refLabel: (id?: number) => string
   onCabecera: (patch: Partial<Producto>) => void
+  onPatch: (patch: Partial<Producto>) => void
   onEmbalaje: (item: string, resultado: string) => void
   onMontar: (tp: string, tm: string, cant: number) => void
   onResultado: (f: LocalFiltracion, cumple: number, comentario: string) => void
@@ -277,6 +344,7 @@ function ProductoDetalle({
   onFinalizar: () => void
 }) {
   const [tab, setTab] = useState<Tab>('pe')
+  const admin = getUser()?.rol === 'admin'
   const porRol = (rol: string) => personas.filter((p) => p.rol === rol)
   const cabeceraCompleta = !!(prod.referencia_id && prod.maquina_id && prod.turno)
   const faltantesEmb = opts ? opts.embalaje_f006.filter((o) => !prod.embalaje[o.value]) : []
@@ -289,7 +357,7 @@ function ProductoDetalle({
 
   return (
     <div>
-      <h3 className="prod-title">{refLabel(prod.referencia_id)}{prod.finalizado ? ' · ✔ finalizado' : ''}</h3>
+      <h3 className="prod-title">{refLabel(prod.referencia_id)}{prod.marca ? ` ${prod.marca}` : ''}</h3>
 
       <div className="tabbar">
         <button className={'tab' + (tab === 'pe' ? ' active' : '')} onClick={() => setTab('pe')}>
@@ -306,12 +374,19 @@ function ProductoDetalle({
       {tab === 'pe' && (
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Producto</h3>
-          <Field label="Referencia" hint="busca por palabras clave">
-            <ReferenceSearch referencias={refs} value={prod.referencia_id} onChange={(id) => onCabecera({ referencia_id: id })} />
-          </Field>
           <div className="row">
-            <Field label="Fecha">
-              <input type="date" value={prod.fecha} onChange={(e) => onCabecera({ fecha: e.target.value })} />
+            <Field label="Referencia" hint="busca por palabras clave">
+              <ReferenceSearch referencias={refs} value={prod.referencia_id} onChange={(id) => onCabecera({ referencia_id: id })} />
+            </Field>
+            <Field label="Marca" hint="texto libre">
+              <input value={prod.marca ?? ''} onChange={(e) => onPatch({ marca: e.target.value })} onBlur={() => onCabecera({})} />
+            </Field>
+          </div>
+          <div className="row">
+            <Field label="Fecha" hint={admin ? 'editable (solo admin)' : 'día actual'}>
+              {admin
+                ? <input type="date" value={prod.fecha} onChange={(e) => onCabecera({ fecha: e.target.value })} />
+                : <input type="text" value={new Date(prod.fecha + 'T00:00:00').toLocaleDateString('es-CO')} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />}
             </Field>
             <Field label="Máquina">
               <select value={prod.maquina_id ?? ''} onChange={(e) => onCabecera({ maquina_id: Number(e.target.value) })}>
@@ -332,6 +407,26 @@ function ProductoDetalle({
           {opts && (
             <ChecklistCNCNA items={opts.embalaje_f006} resultados={opts.resultados} value={prod.embalaje} onChange={onEmbalaje} />
           )}
+
+          <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0' }} />
+          <h3 style={{ marginTop: 0 }}>Mediciones producto <span className="hint">(en mm)</span></h3>
+          <div className="row">
+            <Field label="Altura vaso">
+              <input value={prod.altura_vaso ?? ''} onChange={(e) => onPatch({ altura_vaso: e.target.value })} onBlur={() => onCabecera({})} />
+            </Field>
+            <Field label="Diámetro superior">
+              <input value={prod.diametro_superior ?? ''} onChange={(e) => onPatch({ diametro_superior: e.target.value })} onBlur={() => onCabecera({})} />
+            </Field>
+          </div>
+          <div className="row">
+            <Field label="Grueso Rim">
+              <input value={prod.grueso_rim ?? ''} onChange={(e) => onPatch({ grueso_rim: e.target.value })} onBlur={() => onCabecera({})} />
+            </Field>
+            <Field label="Diámetro inferior">
+              <input value={prod.diametro_inferior ?? ''} onChange={(e) => onPatch({ diametro_inferior: e.target.value })} onBlur={() => onCabecera({})} />
+            </Field>
+          </div>
+
           <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" onClick={() => setTab('filt')}>Siguiente →</button>
           </div>
@@ -345,7 +440,7 @@ function ProductoDetalle({
           {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} />}
           {prod.filtraciones.length === 0 && cabeceraCompleta && <p className="muted">Aún no hay pruebas montadas.</p>}
           {prod.filtraciones.map((f) => (
-            <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={refLabel(prod.referencia_id)} onResultado={onResultado} />
+            <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={refLabel(prod.referencia_id) + (prod.marca ? ` ${prod.marca}` : '')} onResultado={onResultado} />
           ))}
           <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" onClick={() => setTab('firmas')}>Siguiente →</button>
@@ -358,23 +453,29 @@ function ProductoDetalle({
           <h3 style={{ marginTop: 0 }}>Firmas</h3>
           <p className="muted">Selecciona quién realizó este producto (puede variar según la referencia).</p>
           <div className="row">
-            <Field label="Auxiliar de calidad">
-              <select value={prod.auxiliar_id ?? ''} onChange={(e) => onFirmas({ auxiliar_id: Number(e.target.value) })}>
-                <option value="">Seleccionar…</option>
-                {porRol('auxiliar').map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+            <Field label="Auxiliar de calidad" hint="busca por nombre">
+              <SearchSelect
+                items={porRol('auxiliar').map((p) => ({ id: p.id, label: p.nombre }))}
+                value={prod.auxiliar_id}
+                onChange={(id) => onFirmas({ auxiliar_id: id })}
+                placeholder="Buscar auxiliar…"
+              />
             </Field>
-            <Field label="Operario(a)">
-              <select value={prod.operario_id ?? ''} onChange={(e) => onFirmas({ operario_id: Number(e.target.value) })}>
-                <option value="">Seleccionar…</option>
-                {porRol('operario').map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+            <Field label="Operario(a)" hint="busca por nombre">
+              <SearchSelect
+                items={porRol('operario').map((p) => ({ id: p.id, label: p.nombre }))}
+                value={prod.operario_id}
+                onChange={(id) => onFirmas({ operario_id: id })}
+                placeholder="Buscar operario…"
+              />
             </Field>
-            <Field label="Empacador(a)">
-              <select value={prod.empacador_id ?? ''} onChange={(e) => onFirmas({ empacador_id: Number(e.target.value) })}>
-                <option value="">Seleccionar…</option>
-                {porRol('empacador').map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+            <Field label="Empacador(a)" hint="busca por nombre">
+              <SearchSelect
+                items={porRol('empacador').map((p) => ({ id: p.id, label: p.nombre }))}
+                value={prod.empacador_id}
+                onChange={(id) => onFirmas({ empacador_id: id })}
+                placeholder="Buscar empacador…"
+              />
             </Field>
           </div>
 

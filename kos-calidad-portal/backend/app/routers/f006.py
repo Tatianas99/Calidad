@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from .. import models, schemas
-from ..timeutil import now_co
+from ..auth import require_admin, get_current_user
+from ..timeutil import now_co, fecha_fields
 
 router = APIRouter(prefix="/f006", tags=["F-006 Vasos"])
 
@@ -20,15 +21,25 @@ def _get_registro(registro_id: str, db: Session) -> models.F006Registro:
 
 
 @router.post("/registros", response_model=schemas.F006RegistroOut, status_code=201)
-def crear_registro(data: schemas.F006RegistroCreate, db: Session = Depends(get_db)):
+def crear_registro(
+    data: schemas.F006RegistroCreate,
+    user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Crea la cabecera (producto): referencia, fecha, máquina, turno."""
     if data.id:  # idempotencia ante reintentos
         existing = db.get(models.F006Registro, data.id)
         if existing:
             return existing
+    f, _ = fecha_fields(user.rol == "admin", data.fecha)
     kwargs = dict(
         referencia_id=data.referencia_id,
-        fecha=data.fecha,
+        marca=data.marca,
+        altura_vaso=data.altura_vaso,
+        diametro_superior=data.diametro_superior,
+        diametro_inferior=data.diametro_inferior,
+        grueso_rim=data.grueso_rim,
+        fecha=f,
         maquina_id=data.maquina_id,
         turno=data.turno,
     )
@@ -62,12 +73,20 @@ def obtener_registro(registro_id: str, db: Session = Depends(get_db)):
 
 @router.put("/registros/{registro_id}", response_model=schemas.F006RegistroOut)
 def actualizar_cabecera(
-    registro_id: str, data: schemas.F006CabeceraUpdate, db: Session = Depends(get_db)
+    registro_id: str, data: schemas.F006CabeceraUpdate,
+    user: models.Usuario = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     """Actualiza la cabecera (referencia, fecha, máquina, turno) de un producto."""
     reg = _get_registro(registro_id, db)
     reg.referencia_id = data.referencia_id
-    reg.fecha = data.fecha
+    reg.marca = data.marca
+    reg.altura_vaso = data.altura_vaso
+    reg.diametro_superior = data.diametro_superior
+    reg.diametro_inferior = data.diametro_inferior
+    reg.grueso_rim = data.grueso_rim
+    # La fecha solo la puede cambiar un admin (fecha manual); si no, se conserva.
+    if data.fecha and user.rol == "admin":
+        reg.fecha = data.fecha
     reg.maquina_id = data.maquina_id
     reg.turno = data.turno
     db.commit()
@@ -136,6 +155,20 @@ def registrar_resultado(
     db.commit()
     db.refresh(f)
     return f
+
+
+@router.delete("/registros/{registro_id}", status_code=204)
+def borrar_registro(
+    registro_id: str,
+    _admin: models.Usuario = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Borra un registro F-006 con su embalaje y filtraciones. Solo admin."""
+    reg = db.get(models.F006Registro, registro_id)
+    if not reg:
+        return
+    db.delete(reg)
+    db.commit()
 
 
 @router.put("/registros/{registro_id}/firmas", response_model=schemas.F006RegistroOut)

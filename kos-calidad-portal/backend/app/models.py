@@ -22,6 +22,12 @@ class Persona(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nombre: Mapped[str] = mapped_column(String(120), nullable=False)
     rol: Mapped[str] = mapped_column(String(30), nullable=False)  # auxiliar|operario|empacador|responsable
+    # Id de la fila de origen en kos_apps.personal_planta (clave única y estable
+    # de esa tabla). Es la clave que usa la sincronización para hacer upsert sin
+    # duplicar; la cédula NO se usa porque en personal_planta hay cédulas
+    # repetidas (registros de prueba/placeholder). Nulo en personas creadas a mano.
+    origen_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    cedula: Mapped[Optional[str]] = mapped_column(String(20))  # informativa
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -39,6 +45,8 @@ class Referencia(Base):
     codigo: Mapped[str] = mapped_column(String(60), nullable=False)
     descripcion: Mapped[Optional[str]] = mapped_column(String(160))
     tipo_producto: Mapped[Optional[str]] = mapped_column(String(40))  # vaso|tazon|tapa_papel|tapa_plastica
+    # Id de la fila de origen en dbo.PQRS_Referencias (clave de sincronización).
+    origen_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -68,6 +76,12 @@ class F006Registro(Base):
     __tablename__ = "f006_registro"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     referencia_id: Mapped[int] = mapped_column(ForeignKey("referencias.id"), nullable=False)
+    marca: Mapped[Optional[str]] = mapped_column(String(80))  # texto libre (marca del producto)
+    # Mediciones del producto (texto libre; el operario las escribe con su unidad).
+    altura_vaso: Mapped[Optional[str]] = mapped_column(String(40))
+    diametro_superior: Mapped[Optional[str]] = mapped_column(String(40))
+    diametro_inferior: Mapped[Optional[str]] = mapped_column(String(40))
+    grueso_rim: Mapped[Optional[str]] = mapped_column(String(40))
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
     maquina_id: Mapped[int] = mapped_column(ForeignKey("maquinas.id"), nullable=False)
     turno: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -133,3 +147,111 @@ class F015Medicion(Base):
 
     punto: Mapped["PuntoMedicion"] = relationship()
     responsable: Mapped[Optional["Persona"]] = relationship()
+
+
+# --------------------------------------------------------------------------- #
+# F-158 — Rutas Calidad (recorridos de los auxiliares por proceso)
+# --------------------------------------------------------------------------- #
+class F158Recorrido(Base):
+    __tablename__ = "f158_recorrido"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    proceso: Mapped[str] = mapped_column(String(30), nullable=False)  # slitter|flexo|…
+    maquina: Mapped[Optional[str]] = mapped_column(String(60))
+    # Responsable = usuario que inició sesión (id + nombre en el momento del registro).
+    responsable_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    responsable_nombre: Mapped[Optional[str]] = mapped_column(String(120))
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
+    fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+    observaciones: Mapped[Optional[str]] = mapped_column(String(4000))
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+    actualizado_en: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    items: Mapped[List["F158Item"]] = relationship(
+        back_populates="recorrido", cascade="all, delete-orphan"
+    )
+    adjuntos: Mapped[List["F158Adjunto"]] = relationship(
+        back_populates="recorrido", cascade="all, delete-orphan"
+    )
+
+
+class F158Item(Base):
+    __tablename__ = "f158_item"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    recorrido_id: Mapped[str] = mapped_column(ForeignKey("f158_recorrido.id"), nullable=False)
+    campo_key: Mapped[str] = mapped_column(String(40), nullable=False)
+    campo_label: Mapped[str] = mapped_column(String(120), nullable=False)
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False)  # texto|cncna|opciones|referencia
+    valor: Mapped[Optional[str]] = mapped_column(String(400))       # texto a mostrar/filtrar
+    ref_id: Mapped[Optional[int]] = mapped_column(Integer)          # solo tipo referencia
+    marca: Mapped[Optional[str]] = mapped_column(String(80))        # solo tipo referencia
+
+    recorrido: Mapped["F158Recorrido"] = relationship(back_populates="items")
+
+
+class F158Adjunto(Base):
+    __tablename__ = "f158_adjunto"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    recorrido_id: Mapped[str] = mapped_column(ForeignKey("f158_recorrido.id"), nullable=False)
+    nombre: Mapped[str] = mapped_column(String(200), nullable=False)
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False)   # image|video
+    ruta: Mapped[str] = mapped_column(String(300), nullable=False)  # ruta relativa en disco
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+
+    recorrido: Mapped["F158Recorrido"] = relationship(back_populates="adjuntos")
+
+
+# --------------------------------------------------------------------------- #
+# F-204 — Entrega de producto por turno (clase B / verificación de desperdicio)
+# --------------------------------------------------------------------------- #
+class F204Registro(Base):
+    __tablename__ = "f204_registro"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
+    fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+    turno: Mapped[int] = mapped_column(Integer, nullable=False)
+    maquina_id: Mapped[int] = mapped_column(ForeignKey("maquinas.id"), nullable=False)
+    referencia_id: Mapped[int] = mapped_column(ForeignKey("referencias.id"), nullable=False)
+    marca: Mapped[Optional[str]] = mapped_column(String(80))
+    cantidad_clase_b: Mapped[Optional[int]] = mapped_column(Integer)
+    verificacion_desperdicio: Mapped[Optional[str]] = mapped_column(String(4))  # C|NC|NA
+    # Entregado por: operario seleccionado del catálogo (id + nombre snapshot).
+    entregado_por_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
+    entregado_por_nombre: Mapped[Optional[str]] = mapped_column(String(120))
+    # Recibido por: usuario que registró (sesión).
+    recibido_por_id: Mapped[Optional[int]] = mapped_column(Integer)
+    recibido_por_nombre: Mapped[Optional[str]] = mapped_column(String(120))
+    observaciones: Mapped[Optional[str]] = mapped_column(String(4000))
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+
+    maquina: Mapped["Maquina"] = relationship()
+    referencia: Mapped["Referencia"] = relationship()
+    entregado_por: Mapped[Optional["Persona"]] = relationship()
+
+
+# --------------------------------------------------------------------------- #
+# F-005 — Liberación de rollos
+# --------------------------------------------------------------------------- #
+class F005Registro(Base):
+    __tablename__ = "f005_registro"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
+    fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+    proceso: Mapped[Optional[str]] = mapped_column(String(30))    # slitter|flexo|troquelado
+    maquina: Mapped[Optional[str]] = mapped_column(String(60))
+    lote: Mapped[str] = mapped_column(String(80), nullable=False)
+    material: Mapped[Optional[str]] = mapped_column(String(20))   # opciones F-158
+    ancho: Mapped[Optional[str]] = mapped_column(String(40))      # manual
+    calibre: Mapped[Optional[str]] = mapped_column(String(40))    # opciones F-158 (u "otro")
+    kg: Mapped[Optional[str]] = mapped_column(String(40))         # manual
+    # Estado (checklist C|NC|N/A)
+    estado_dinas: Mapped[Optional[str]] = mapped_column(String(4))
+    estado_alcohol: Mapped[Optional[str]] = mapped_column(String(4))
+    estado_lapiz: Mapped[Optional[str]] = mapped_column(String(4))
+    estado_armado: Mapped[Optional[str]] = mapped_column(String(4))
+    estado_inocuidad: Mapped[Optional[str]] = mapped_column(String(4))
+    proveedor: Mapped[Optional[str]] = mapped_column(String(120))
+    observaciones: Mapped[Optional[str]] = mapped_column(String(4000))
+    # Responsable = usuario en sesión (id + nombre snapshot).
+    responsable_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    responsable_nombre: Mapped[Optional[str]] = mapped_column(String(120))
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)

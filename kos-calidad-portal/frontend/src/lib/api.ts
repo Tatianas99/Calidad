@@ -1,7 +1,16 @@
 import { enqueue, processQueue } from './queue'
 import { getToken, triggerUnauthorized, type Usuario } from './auth'
 
-const API: string = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
+// Si no se define VITE_API_URL, se usa el MISMO host desde el que se abrió la
+// página (puerto 8000). Así funciona en el PC (localhost) y en el celular por IP
+// sin tener que editar la configuración cada vez que cambia la IP del PC.
+function defaultApiBase(): string {
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`
+  }
+  return 'http://localhost:8000'
+}
+const API: string = (import.meta.env.VITE_API_URL as string) || defaultApiBase()
 
 export function apiBaseUrl() {
   return API
@@ -77,7 +86,8 @@ export async function apiSend<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', pa
     try { detail = (await res.json()).detail } catch { /* ignore */ }
     throw new Error(detail || `${method} ${path} -> ${res.status}`)
   }
-  return res.json() as Promise<T>
+  const text = await res.text()  // 204/sin cuerpo (p. ej. DELETE) -> null
+  return (text ? JSON.parse(text) : null) as T
 }
 
 export function startSync() {

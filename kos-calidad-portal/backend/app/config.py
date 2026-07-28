@@ -35,9 +35,15 @@ def _best_sqlserver_driver() -> str:
     return "ODBC Driver 18 for SQL Server"
 
 
-def _build_mssql_url():
+def _build_mssql_url(name: str | None = None):
+    """Construye la URL SQLAlchemy/ODBC para una base concreta del mismo servidor.
+
+    Si `name` es None se usa BD_NAME (la base del portal de calidad). Con `name`
+    explícito se apunta a otra base del mismo servidor (mismas credenciales),
+    p. ej. `kos_apps` para leer la tabla de personal de planta.
+    """
     host = os.getenv("BD_HOST")
-    name = os.getenv("BD_NAME")
+    name = name or os.getenv("BD_NAME")
     user = os.getenv("BD_USER")
     pwd = os.getenv("BD_PASSWORD")
     if not (host and name and user and pwd):
@@ -59,6 +65,13 @@ def _build_mssql_url():
 
 
 DATABASE_URL = os.getenv("DATABASE_URL") or _build_mssql_url() or "sqlite:///./kos_calidad.db"
+
+# Base de datos de aplicaciones KOS (mismo servidor y credenciales) que contiene
+# la tabla `personal_planta`. Sirve para poblar el catálogo de personas del
+# portal. Si no está configurada (o corremos en SQLite local), queda en None y
+# la sincronización simplemente no se ejecuta.
+BD_NAME_DATA = os.getenv("BD_NAME_DATA")
+DATA_DATABASE_URL = _build_mssql_url(BD_NAME_DATA) if BD_NAME_DATA else None
 
 _IS_SQLITE = DATABASE_URL.startswith("sqlite")
 

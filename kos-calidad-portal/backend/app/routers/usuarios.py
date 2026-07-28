@@ -50,6 +50,18 @@ def actualizar(usuario_id: int, data: schemas.UsuarioUpdate, _: models.Usuario =
     u = db.get(models.Usuario, usuario_id)
     if not u:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if data.username is not None:
+        nuevo = data.username.strip()
+        if not nuevo:
+            raise HTTPException(status_code=422, detail="El usuario no puede quedar vacío")
+        existe = (
+            db.query(models.Usuario)
+            .filter(models.Usuario.username == nuevo, models.Usuario.id != usuario_id)
+            .first()
+        )
+        if existe:
+            raise HTTPException(status_code=409, detail="Ese usuario ya está en uso")
+        u.username = nuevo
     if data.nombre is not None:
         u.nombre = data.nombre.strip()
     if data.rol is not None:

@@ -9,7 +9,12 @@ export type QueuedRequest = {
   path: string
   body?: unknown
   createdAt: number
+  attempts?: number
 }
+
+// Máximo de reintentos antes de descartar un envío que falla persistentemente
+// (evita que un envío "envenenado" bloquee toda la cola para siempre).
+const MAX_INTENTOS = 6
 
 const KEY = 'kos_mutation_queue'
 type Listener = (pending: number) => void
@@ -44,6 +49,11 @@ export function enqueue(req: Omit<QueuedRequest, 'qid' | 'createdAt'>) {
   save(q)
 }
 
+// Descarta todos los envíos pendientes (acción manual del usuario).
+export function clearQueue() {
+  save([])
+}
+
 let processing = false
 
 export async function processQueue(apiBase: string) {
@@ -69,9 +79,24 @@ export async function processQueue(apiBase: string) {
           save(q2)
           continue
         }
-        // 401 = sesión no válida ahora; 404 = dependencia no sincronizada; 5xx = temporal -> reintentar luego
-        if (res.status === 401 || res.status === 404 || res.status >= 500) break
-        // 4xx permanente (validación) -> descartar para no bloquear la cola
+        // 401 = sesión no válida ahora -> reintentar tras re-login (no descarta)
+        if (res.status === 401) break
+        // 404 (dependencia no sincronizada) o 5xx (temporal) -> reintentar,
+        // pero descartar si falla demasiadas veces (envío envenenado).
+        if (res.status === 404 || res.status >= 500) {
+          const q2 = load()
+          if (q2[0] && q2[0].qid === req.qid) {
+            q2[0].attempts = (q2[0].attempts || 0) + 1
+            if (q2[0].attempts >= MAX_INTENTOS) {
+              q2.shift()
+              save(q2)
+              continue
+            }
+            save(q2)
+          }
+          break
+        }
+        // Otro 4xx permanente (validación) -> descartar para no bloquear la cola
         const q2 = load()
         q2.shift()
         save(q2)

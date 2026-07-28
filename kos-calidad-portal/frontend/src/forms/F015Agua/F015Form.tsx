@@ -1,19 +1,30 @@
 import { useEffect, useState } from 'react'
 import { apiGet, apiMutate } from '../../lib/api'
 import { uuid } from '../../lib/uuid'
+import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
+import SearchSelect from '../../components/SearchSelect'
 import type { Persona, PuntoMedicion, F015Medicion } from '../../lib/types'
 
 const PH_MIN = 6.5, PH_MAX = 8.5
 const CLORO_MIN = 0.3, CLORO_MAX = 2
 const hoy = () => new Date().toISOString().slice(0, 10)
 
-export default function F015Form({ onExit }: { onExit: () => void }) {
+export default function F015Form({
+  onExit, editarId, onEditarConsumido,
+}: {
+  onExit: () => void
+  editarId?: string | null
+  onEditarConsumido?: () => void
+}) {
   const [puntos, setPuntos] = useState<PuntoMedicion[]>([])
   const [personas, setPersonas] = useState<Persona[]>([])
   const [lista, setLista] = useState<F015Medicion[]>([])
   const [msg, setMsg] = useState('')
 
+  const admin = getUser()?.rol === 'admin'
+  const [fechaManual, setFechaManual] = useState(hoy())
+  const [editId, setEditId] = useState<string | null>(null)
   const [puntoId, setPuntoId] = useState('')
   const [ph, setPh] = useState('')
   const [cloro, setCloro] = useState('')
@@ -29,6 +40,27 @@ export default function F015Form({ onExit }: { onExit: () => void }) {
     cargarLista()
   }, [])
 
+  // Edición pedida desde "Ver registros F-015": precarga la medición.
+  useEffect(() => {
+    if (!editarId) return
+    apiGet<F015Medicion>(`/f015/mediciones/${editarId}`)
+      .then((m) => {
+        setEditId(m.id)
+        setPuntoId(String(m.punto_medicion_id))
+        setPh(String(m.ph))
+        setCloro(String(m.cloro))
+        setResponsableId(m.responsable_id ? String(m.responsable_id) : '')
+        setComentario(m.comentario ?? '')
+      })
+      .catch(() => {})
+      .finally(() => onEditarConsumido?.())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editarId])
+
+  const cancelarEdicion = () => {
+    setEditId(null); setPuntoId(''); setPh(''); setCloro(''); setResponsableId(''); setComentario('')
+  }
+
   const flash = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(''), 2500) }
 
   const phNum = parseFloat(ph)
@@ -38,16 +70,22 @@ export default function F015Form({ onExit }: { onExit: () => void }) {
 
   async function guardar() {
     if (!puntoId || ph === '' || cloro === '') { flash('Completa punto, PH y cloro'); return }
-    const r = await apiMutate('POST', '/f015/mediciones', {
-      id: uuid(),
+    const body = {
       punto_medicion_id: Number(puntoId),
       ph: phNum,
       cloro: cloroNum,
       responsable_id: responsableId ? Number(responsableId) : null,
       comentario: comentario || null,
-    })
-    flash(r.ok ? 'Medición guardada' : 'Guardada (pendiente de sincronizar)')
-    setPh(''); setCloro(''); setComentario('')
+    }
+    if (editId) {
+      const r = await apiMutate('PUT', `/f015/mediciones/${editId}`, body)
+      flash(r.ok ? 'Medición actualizada ✔' : 'Actualizada (pendiente de sincronizar)')
+      cancelarEdicion()
+    } else {
+      const r = await apiMutate('POST', '/f015/mediciones', { id: uuid(), ...body, ...(admin ? { fecha: fechaManual } : {}) })
+      flash(r.ok ? 'Medición guardada' : 'Guardada (pendiente de sincronizar)')
+      setPh(''); setCloro(''); setComentario('')
+    }
     cargarLista()
   }
 
@@ -61,9 +99,19 @@ export default function F015Form({ onExit }: { onExit: () => void }) {
       </div>
 
       <div className="panel">
+        {editId && (
+          <p className="tag-warn" style={{ marginTop: 0 }}>
+            ✎ Editando una medición existente. <button className="btn btn-ghost pill-btn" onClick={cancelarEdicion}>Cancelar edición</button>
+          </p>
+        )}
         <p className="muted" style={{ marginTop: 0 }}>
           Rangos esperados: <strong>PH 6.5 – 8.5</strong> · <strong>Cloro 0.3 – 2</strong>. La fecha y hora las registra el sistema.
         </p>
+        {admin && !editId && (
+          <Field label="Fecha" hint="editable (solo admin) · para alimentar manualmente">
+            <input type="date" value={fechaManual} onChange={(e) => setFechaManual(e.target.value)} />
+          </Field>
+        )}
         <div className="row">
           <Field label="Punto de medición">
             <select value={puntoId} onChange={(e) => setPuntoId(e.target.value)}>
@@ -71,11 +119,13 @@ export default function F015Form({ onExit }: { onExit: () => void }) {
               {puntos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </Field>
-          <Field label="Responsable">
-            <select value={responsableId} onChange={(e) => setResponsableId(e.target.value)}>
-              <option value="">Seleccionar…</option>
-              {personas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
+          <Field label="Responsable" hint="busca por nombre">
+            <SearchSelect
+              items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
+              value={responsableId ? Number(responsableId) : undefined}
+              onChange={(id) => setResponsableId(String(id))}
+              placeholder="Buscar responsable…"
+            />
           </Field>
           <Field label="PH" hint="6.5 – 8.5">
             <input type="number" step="0.1" inputMode="decimal" value={ph}
@@ -96,7 +146,7 @@ export default function F015Form({ onExit }: { onExit: () => void }) {
         </Field>
         <div className="btn-row">
           <button className="btn btn-ghost" onClick={onExit}>Ir al inicio</button>
-          <button className="btn btn-primary" onClick={guardar}>Guardar medición</button>
+          <button className="btn btn-primary" onClick={guardar}>{editId ? 'Actualizar medición' : 'Guardar medición'}</button>
         </div>
       </div>
 

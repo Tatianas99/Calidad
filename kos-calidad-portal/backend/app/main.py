@@ -1,20 +1,39 @@
 """Punto de entrada de la API del Portal de Calidad KOS Colombia."""
+import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from fastapi import Depends
 
 from .config import CORS_ORIGINS
-from .db import init_db
+from .db import init_db, SessionLocal
 from .auth import get_current_user
-from .routers import catalogos, f006, f015, reports, auth as auth_router, usuarios
+from .personal import sync_personas
+from .referencias_sync import sync_referencias
+from .routers import catalogos, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios
+
+log = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()  # crea tablas si no existen (dev/arranque)
+    # Sincroniza el catálogo de personas desde kos_apps.personal_planta.
+    # Best-effort: si la base de personal no está disponible, el portal arranca
+    # igual con el último catálogo sincronizado.
+    try:
+        db = SessionLocal()
+        try:
+            sync_personas(db)
+            sync_referencias(db)
+        finally:
+            db.close()
+    except Exception:
+        log.exception("No se pudo sincronizar catálogos (personal/referencias) al arranque")
     yield
 
 
@@ -33,6 +52,11 @@ app.add_middleware(
     allow_credentials=False,
 )
 
+# Archivos subidos (fotos/videos de F-158). Se sirven en /uploads/…
+_UPLOADS = Path(__file__).resolve().parents[1] / "uploads"
+_UPLOADS.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_UPLOADS)), name="uploads")
+
 
 @app.get("/health", tags=["Salud"])
 def health():
@@ -45,7 +69,10 @@ app.include_router(auth_router.router)
 # Endpoints protegidos: requieren token de sesión válido.
 _auth = [Depends(get_current_user)]
 app.include_router(catalogos.router, dependencies=_auth)
+app.include_router(f005.router, dependencies=_auth)
 app.include_router(f006.router, dependencies=_auth)
 app.include_router(f015.router, dependencies=_auth)
+app.include_router(f158.router, dependencies=_auth)
+app.include_router(f204.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
 app.include_router(usuarios.router)  # ya exige permiso gestionar_usuarios internamente

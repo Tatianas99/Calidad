@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { onPendingChange } from '../lib/queue'
+import { onPendingChange, clearQueue } from '../lib/queue'
 
 // Indicador visible del estado de conexión y de envíos pendientes de sincronizar.
 export default function SyncBadge() {
@@ -23,7 +23,20 @@ export default function SyncBadge() {
     <div className="sync">
       <span className={'dot' + (online ? '' : ' off')} />
       <span>{online ? 'En línea' : 'Sin conexión'}</span>
-      {pending > 0 && <span className="pill">{pending} por sincronizar</span>}
+      {pending > 0 && (
+        <>
+          <span className="pill">{pending} por sincronizar</span>
+          <button
+            className="pill pill-btn"
+            title="Descartar los envíos pendientes (no se enviarán al servidor)"
+            onClick={() => {
+              if (window.confirm(`¿Descartar ${pending} envío(s) pendiente(s)? No se enviarán al servidor y no podrán recuperarse.`)) clearQueue()
+            }}
+          >
+            descartar
+          </button>
+        </>
+      )}
     </div>
   )
 }

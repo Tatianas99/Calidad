@@ -18,8 +18,11 @@ from . import models
 
 # Permisos disponibles en el sistema (clave -> etiqueta).
 PERMISOS = {
+    "registrar_f005": "Registrar F-005 (Liberación rollos)",
     "registrar_f006": "Registrar F-006",
     "registrar_f015": "Registrar F-015",
+    "registrar_f158": "Registrar F-158 (Rutas Calidad)",
+    "registrar_f204": "Registrar F-204 (Entrega producto)",
     "ver_registros": "Ver registros",
     "gestionar_usuarios": "Gestionar usuarios",
 }
@@ -115,3 +118,10 @@ def require(permiso: str):
             raise HTTPException(status_code=403, detail="No tienes permiso para esta acción")
         return user
     return dep
+
+
+def require_admin(user: models.Usuario = Depends(get_current_user)) -> models.Usuario:
+    """Dependencia que exige rol admin (editar/borrar registros)."""
+    if user.rol != "admin":
+        raise HTTPException(status_code=403, detail="Solo un administrador puede editar o borrar registros")
+    return user

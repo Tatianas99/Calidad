@@ -41,18 +41,28 @@ class PuntoMedicionOut(BaseModel):
 # --------------------------------------------------------------------------- #
 # F-006 — Ruta control proceso vasos
 # --------------------------------------------------------------------------- #
-class F006RegistroCreate(BaseModel):
+class Mediciones(BaseModel):
+    """Mediciones del producto (texto libre)."""
+    altura_vaso: Optional[str] = None
+    diametro_superior: Optional[str] = None
+    diametro_inferior: Optional[str] = None
+    grueso_rim: Optional[str] = None
+
+
+class F006RegistroCreate(Mediciones):
     id: Optional[str] = None  # UUID generado en el cliente (idempotencia)
     referencia_id: int
-    fecha: date
+    marca: Optional[str] = None
+    fecha: Optional[date] = None  # solo admin puede fijar fecha manual
     maquina_id: int
     turno: int = Field(ge=1, le=3)
 
 
-class F006CabeceraUpdate(BaseModel):
+class F006CabeceraUpdate(Mediciones):
     """Editar la cabecera de un producto ya creado."""
     referencia_id: int
-    fecha: date
+    marca: Optional[str] = None
+    fecha: Optional[date] = None
     maquina_id: int
     turno: int = Field(ge=1, le=3)
 
@@ -133,9 +143,10 @@ class FiltracionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class F006RegistroOut(BaseModel):
+class F006RegistroOut(Mediciones):
     id: str
     referencia_id: int
+    marca: Optional[str] = None
     fecha: date
     maquina_id: int
     turno: int
@@ -153,6 +164,7 @@ class F006RegistroOut(BaseModel):
 # --------------------------------------------------------------------------- #
 class F015MedicionCreate(BaseModel):
     id: Optional[str] = None
+    fecha: Optional[date] = None  # solo admin puede fijar fecha manual
     fecha_hora: Optional[datetime] = None  # si no se envía, la fija el servidor
     punto_medicion_id: int
     ph: float = Field(ge=0, le=14)
@@ -171,6 +183,131 @@ class F015MedicionOut(BaseModel):
     ph_en_rango: bool
     cloro_en_rango: bool
     comentario: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------------------------------------------------------- #
+# F-158 — Rutas Calidad
+# --------------------------------------------------------------------------- #
+class F158ItemIn(BaseModel):
+    campo_key: str
+    campo_label: str
+    tipo: str
+    valor: Optional[str] = None
+    ref_id: Optional[int] = None
+    marca: Optional[str] = None
+
+
+class F158ItemOut(F158ItemIn):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class F158AdjuntoOut(BaseModel):
+    id: int
+    nombre: str
+    tipo: str
+    url: str = ""  # se completa en el router con la ruta pública
+    model_config = ConfigDict(from_attributes=True)
+
+
+class F158RecorridoCreate(BaseModel):
+    id: Optional[str] = None  # UUID del cliente (idempotencia)
+    fecha: Optional[date] = None  # solo admin puede fijar fecha manual
+    proceso: str
+    maquina: Optional[str] = None
+    observaciones: Optional[str] = None
+    items: List[F158ItemIn] = []
+
+
+class F158RecorridoUpdate(BaseModel):
+    maquina: Optional[str] = None
+    observaciones: Optional[str] = None
+    items: List[F158ItemIn] = []
+
+
+class F158RecorridoOut(BaseModel):
+    id: str
+    proceso: str
+    maquina: Optional[str] = None
+    responsable_id: Optional[int] = None
+    responsable_nombre: Optional[str] = None
+    fecha: date
+    fecha_hora: datetime
+    observaciones: Optional[str] = None
+    creado_en: datetime
+    actualizado_en: Optional[datetime] = None
+    items: List[F158ItemOut] = []
+    adjuntos: List[F158AdjuntoOut] = []
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------------------------------------------------------- #
+# F-204 — Entrega de producto por turno
+# --------------------------------------------------------------------------- #
+class F204RegistroCreate(BaseModel):
+    id: Optional[str] = None  # UUID del cliente (idempotencia)
+    fecha: Optional[date] = None  # solo admin puede fijar fecha manual
+    turno: int = Field(ge=1, le=3)
+    maquina_id: int
+    referencia_id: int
+    marca: Optional[str] = None
+    cantidad_clase_b: Optional[int] = Field(default=None, ge=0)
+    verificacion_desperdicio: Optional[str] = None  # C|NC|NA
+    entregado_por_id: Optional[int] = None
+    observaciones: Optional[str] = None
+
+
+class F204RegistroOut(BaseModel):
+    id: str
+    fecha: date
+    fecha_hora: datetime
+    turno: int
+    maquina_id: int
+    referencia_id: int
+    marca: Optional[str] = None
+    cantidad_clase_b: Optional[int] = None
+    verificacion_desperdicio: Optional[str] = None
+    entregado_por_id: Optional[int] = None
+    entregado_por_nombre: Optional[str] = None
+    recibido_por_id: Optional[int] = None
+    recibido_por_nombre: Optional[str] = None
+    observaciones: Optional[str] = None
+    creado_en: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------------------------------------------------------- #
+# F-005 — Liberación de rollos
+# --------------------------------------------------------------------------- #
+class F005RegistroBase(BaseModel):
+    proceso: Optional[str] = None
+    maquina: Optional[str] = None
+    lote: str
+    material: Optional[str] = None
+    ancho: Optional[str] = None
+    calibre: Optional[str] = None
+    kg: Optional[str] = None
+    estado_dinas: Optional[str] = None
+    estado_alcohol: Optional[str] = None
+    estado_lapiz: Optional[str] = None
+    estado_armado: Optional[str] = None
+    estado_inocuidad: Optional[str] = None
+    proveedor: Optional[str] = None
+    observaciones: Optional[str] = None
+
+
+class F005RegistroCreate(F005RegistroBase):
+    id: Optional[str] = None  # UUID del cliente (idempotencia)
+    fecha: Optional[date] = None  # solo admin puede fijar fecha manual
+
+
+class F005RegistroOut(F005RegistroBase):
+    id: str
+    fecha: date
+    fecha_hora: datetime
+    responsable_id: Optional[int] = None
+    responsable_nombre: Optional[str] = None
+    creado_en: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -206,6 +343,7 @@ class UsuarioCreate(BaseModel):
 
 
 class UsuarioUpdate(BaseModel):
+    username: Optional[str] = None
     nombre: Optional[str] = None
     rol: Optional[str] = None
     permisos: Optional[List[str]] = None

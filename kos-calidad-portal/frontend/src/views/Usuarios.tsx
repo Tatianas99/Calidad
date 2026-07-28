@@ -14,6 +14,14 @@ export default function Usuarios() {
   // formulario nuevo usuario
   const [nu, setNu] = useState({ username: '', nombre: '', password: '', rol: 'operario', permisos: [] as string[] })
 
+  // edición de un usuario existente (usuario + nombre)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [ed, setEd] = useState({ username: '', nombre: '' })
+
+  // asignar nueva contraseña (visible para poder anotarla)
+  const [pwId, setPwId] = useState<number | null>(null)
+  const [pwVal, setPwVal] = useState('')
+
   const cargar = () => apiGet<Usuario[]>('/usuarios').then(setLista).catch(() => {})
 
   useEffect(() => {
@@ -43,11 +51,24 @@ export default function Usuarios() {
     } catch (e) { fail(e) }
   }
 
-  async function cambiarPassword(u: Usuario) {
-    const p = window.prompt(`Nueva contraseña para ${u.username} (mín. 4):`)
-    if (!p) return
-    if (p.length < 4) { setErr('La contraseña debe tener al menos 4 caracteres.'); return }
-    try { await apiSend('POST', `/usuarios/${u.id}/password`, { password: p }); flash('Contraseña actualizada') } catch (e) { fail(e) }
+  function abrirPassword(u: Usuario) { setErr(''); setEditId(null); setPwId(u.id); setPwVal('') }
+  async function guardarPassword(u: Usuario) {
+    if (pwVal.length < 4) { setErr('La contraseña debe tener al menos 4 caracteres.'); return }
+    try {
+      await apiSend('POST', `/usuarios/${u.id}/password`, { password: pwVal })
+      setPwId(null); setPwVal(''); flash(`Contraseña de @${u.username} actualizada`)
+    } catch (e) { fail(e) }
+  }
+
+  function abrirEdicion(u: Usuario) { setErr(''); setEditId(u.id); setEd({ username: u.username, nombre: u.nombre }) }
+  async function guardarEdicion(u: Usuario) {
+    if (!ed.username.trim() || !ed.nombre.trim()) { setErr('Usuario y nombre no pueden quedar vacíos.'); return }
+    try {
+      const upd = await apiSend<Usuario>('PUT', `/usuarios/${u.id}`, { username: ed.username.trim(), nombre: ed.nombre.trim() })
+      setLista((l) => l.map((x) => (x.id === u.id ? upd : x)))
+      setEditId(null)
+      flash('Datos actualizados')
+    } catch (e) { fail(e) }
   }
 
   const togglePermisoNuevo = (p: string) =>
@@ -98,6 +119,11 @@ export default function Usuarios() {
       {/* Lista de usuarios */}
       <div className="panel">
         <h3 style={{ marginTop: 0 }}>Usuarios ({lista.length})</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Puedes editar usuario, nombre, rol y permisos. La contraseña actual <strong>no se puede ver</strong>
+          {' '}(queda cifrada por seguridad); con <strong>Contraseña</strong> asignas una nueva y esa sí
+          queda visible para que la anotes y se la des al usuario.
+        </p>
         {lista.map((u) => (
           <div key={u.id} className={'user-row' + (u.activo ? '' : ' inactivo')}>
             <div className="user-head">
@@ -109,12 +135,38 @@ export default function Usuarios() {
                 <select value={u.rol} onChange={(e) => actualizar(u, { rol: e.target.value })}>
                   {(meta?.roles ?? []).map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
-                <button className="btn btn-ghost" onClick={() => cambiarPassword(u)}>Contraseña</button>
+                <button className="btn btn-ghost" onClick={() => (editId === u.id ? setEditId(null) : abrirEdicion(u))}>
+                  {editId === u.id ? 'Cerrar' : 'Editar'}
+                </button>
+                <button className="btn btn-ghost" onClick={() => (pwId === u.id ? setPwId(null) : abrirPassword(u))}>Contraseña</button>
                 <button className="btn btn-ghost" onClick={() => actualizar(u, { activo: !u.activo })}>
                   {u.activo ? 'Desactivar' : 'Activar'}
                 </button>
               </div>
             </div>
+
+            {editId === u.id && (
+              <div className="row" style={{ margin: '8px 0 4px' }}>
+                <Field label="Usuario"><input value={ed.username} onChange={(e) => setEd({ ...ed, username: e.target.value })} /></Field>
+                <Field label="Nombre"><input value={ed.nombre} onChange={(e) => setEd({ ...ed, nombre: e.target.value })} /></Field>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+                  <button className="btn btn-primary" onClick={() => guardarEdicion(u)}>Guardar</button>
+                  <button className="btn btn-ghost" onClick={() => setEditId(null)}>Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {pwId === u.id && (
+              <div className="row" style={{ margin: '8px 0 4px' }}>
+                <Field label="Nueva contraseña" hint="visible: anótala para dársela al usuario">
+                  <input type="text" value={pwVal} onChange={(e) => setPwVal(e.target.value)} placeholder="mín. 4 caracteres" autoFocus />
+                </Field>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+                  <button className="btn btn-primary" onClick={() => guardarPassword(u)}>Guardar</button>
+                  <button className="btn btn-ghost" onClick={() => setPwId(null)}>Cancelar</button>
+                </div>
+              </div>
+            )}
             {u.rol !== 'admin' ? (
               <div className="perm-list">
                 {(meta?.permisos ?? []).map((p) => (
