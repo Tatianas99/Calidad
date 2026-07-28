@@ -13,6 +13,17 @@ backend/.venv/
 frontend/node_modules/
 frontend/dist/
 
+# Archivos subidos por los usuarios (fotos/videos de los formatos). NO se
+# versionan: el almacenamiento definitivo es Azure Data Lake / Blob Storage
+# (ver AZURE_STORAGE_* en .env). Esta carpeta es solo caché local de desarrollo.
+backend/uploads/
+
+# NOTA: backend/app/static/ SÍ se commitea a propósito: es el build del
+# frontend ya compilado, necesario para el despliegue manual "Git externo"
+# en Azure (no hay paso de build de Node en ese flujo). Recompilar con
+# `cd frontend && npm run build` y copiar a backend/app/static antes de
+# cada sync a Azure si cambia el frontend.
+
 # Sistema
 Thumbs.db
 .DS_Store

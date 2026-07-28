@@ -76,3 +76,9 @@ app.include_router(f158.router, dependencies=_auth)
 app.include_router(f204.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
 app.include_router(usuarios.router)  # ya exige permiso gestionar_usuarios internamente
+
+# Build del frontend (frontend/dist copiado aquí en el pipeline de despliegue).
+# Se monta al final para que las rutas de la API definidas arriba tengan prioridad.
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="frontend")

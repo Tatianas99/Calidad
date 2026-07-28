@@ -1,16 +1,21 @@
 import { enqueue, processQueue } from './queue'
 import { getToken, triggerUnauthorized, type Usuario } from './auth'
 
-// Si no se define VITE_API_URL, se usa el MISMO host desde el que se abrió la
-// página (puerto 8000). Así funciona en el PC (localhost) y en el celular por IP
-// sin tener que editar la configuración cada vez que cambia la IP del PC.
+// En el despliegue (Azure) se compila con VITE_API_URL='' -> cadena vacía =
+// mismo origen, porque backend y frontend van en el mismo App Service.
+// Si la variable NO está definida (desarrollo local), se usa el MISMO host desde
+// el que se abrió la página (puerto 8000). Así funciona en el PC (localhost) y en
+// el celular por IP sin editar la configuración cada vez que cambia la IP del PC.
 function defaultApiBase(): string {
   if (typeof window !== 'undefined' && window.location && window.location.hostname) {
     return `${window.location.protocol}//${window.location.hostname}:8000`
   }
   return 'http://localhost:8000'
 }
-const API: string = (import.meta.env.VITE_API_URL as string) || defaultApiBase()
+const API: string =
+  import.meta.env.VITE_API_URL !== undefined
+    ? (import.meta.env.VITE_API_URL as string)
+    : defaultApiBase()
 
 export function apiBaseUrl() {
   return API
