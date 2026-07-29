@@ -1,0 +1,1 @@
+-r kos-calidad-portal/backend/requirements.txt
