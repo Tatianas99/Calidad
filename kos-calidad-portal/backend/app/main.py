@@ -15,6 +15,7 @@ from .db import init_db, SessionLocal
 from .auth import get_current_user
 from .personal import sync_personas
 from .referencias_sync import sync_referencias
+from .seed import seed_admin
 from .routers import catalogos, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios
 
 log = logging.getLogger("uvicorn.error")
@@ -24,6 +25,12 @@ log = logging.getLogger("uvicorn.error")
 async def lifespan(app: FastAPI):
     init_db()  # crea tablas si no existen (dev/arranque)
     storage.preparar()  # contenedor de adjuntos (Azure) o carpeta local
+    # Usuario admin inicial (solo si todavía no hay ningún usuario creado).
+    db_admin = SessionLocal()
+    try:
+        seed_admin(db_admin)
+    finally:
+        db_admin.close()
     # Sincroniza el catálogo de personas desde kos_apps.personal_planta.
     # Best-effort: si la base de personal no está disponible, el portal arranca
     # igual con el último catálogo sincronizado.
