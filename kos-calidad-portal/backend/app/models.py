@@ -36,6 +36,8 @@ class Maquina(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nombre: Mapped[str] = mapped_column(String(80), nullable=False)
     area: Mapped[Optional[str]] = mapped_column(String(60))
+    # Id de la fila de origen en kos_apps.dbo.maquinas (clave de sincronización).
+    origen_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -69,12 +71,21 @@ class Usuario(Base):
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
 
 
+class ProveedorPapel(Base):
+    __tablename__ = "proveedores_papel"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    nombre: Mapped[str] = mapped_column(String(120), nullable=False)
+    activo: Mapped[bool] = mapped_column(Boolean, default=True)
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+
+
 # --------------------------------------------------------------------------- #
 # F-006 — Ruta control proceso vasos
 # --------------------------------------------------------------------------- #
 class F006Registro(Base):
     __tablename__ = "f006_registro"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    orden_produccion: Mapped[Optional[str]] = mapped_column(String(40))  # OP (texto)
     referencia_id: Mapped[int] = mapped_column(ForeignKey("referencias.id"), nullable=False)
     marca: Mapped[Optional[str]] = mapped_column(String(80))  # texto libre (marca del producto)
     # Mediciones del producto (texto libre; el operario las escribe con su unidad).
@@ -83,9 +94,11 @@ class F006Registro(Base):
     diametro_inferior: Mapped[Optional[str]] = mapped_column(String(40))
     grueso_rim: Mapped[Optional[str]] = mapped_column(String(40))
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
-    maquina_id: Mapped[int] = mapped_column(ForeignKey("maquinas.id"), nullable=False)
+    maquina_id: Mapped[Optional[int]] = mapped_column(ForeignKey("maquinas.id"))  # legacy
+    maquina_texto: Mapped[Optional[str]] = mapped_column(String(80))  # máquina (buscar/escribir)
     turno: Mapped[int] = mapped_column(Integer, nullable=False)
     auxiliar_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
+    auxiliar_nombre: Mapped[Optional[str]] = mapped_column(String(120))  # auto = usuario en turno
     operario_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
     empacador_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
@@ -137,7 +150,8 @@ class F015Medicion(Base):
     __tablename__ = "f015_medicion"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=now_co)
-    punto_medicion_id: Mapped[int] = mapped_column(ForeignKey("puntos_medicion.id"), nullable=False)
+    punto_medicion_id: Mapped[Optional[int]] = mapped_column(ForeignKey("puntos_medicion.id"))  # legacy
+    punto_texto: Mapped[Optional[str]] = mapped_column(String(120))  # punto (buscar/escribir)
     ph: Mapped[float] = mapped_column(Float, nullable=False)
     cloro: Mapped[float] = mapped_column(Float, nullable=False)
     responsable_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
@@ -209,7 +223,8 @@ class F204Registro(Base):
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
     fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=now_co)
     turno: Mapped[int] = mapped_column(Integer, nullable=False)
-    maquina_id: Mapped[int] = mapped_column(ForeignKey("maquinas.id"), nullable=False)
+    maquina_id: Mapped[Optional[int]] = mapped_column(ForeignKey("maquinas.id"))  # legacy
+    maquina_texto: Mapped[Optional[str]] = mapped_column(String(80))  # máquina (buscar/escribir)
     referencia_id: Mapped[int] = mapped_column(ForeignKey("referencias.id"), nullable=False)
     marca: Mapped[Optional[str]] = mapped_column(String(80))
     cantidad_clase_b: Mapped[Optional[int]] = mapped_column(Integer)

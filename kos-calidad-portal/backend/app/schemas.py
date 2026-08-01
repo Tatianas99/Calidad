@@ -51,19 +51,23 @@ class Mediciones(BaseModel):
 
 class F006RegistroCreate(Mediciones):
     id: Optional[str] = None  # UUID generado en el cliente (idempotencia)
+    orden_produccion: Optional[str] = None
     referencia_id: int
     marca: Optional[str] = None
     fecha: Optional[date] = None  # solo admin puede fijar fecha manual
-    maquina_id: int
+    maquina_id: Optional[int] = None
+    maquina_texto: Optional[str] = None
     turno: int = Field(ge=1, le=3)
 
 
 class F006CabeceraUpdate(Mediciones):
     """Editar la cabecera de un producto ya creado."""
+    orden_produccion: Optional[str] = None
     referencia_id: int
     marca: Optional[str] = None
     fecha: Optional[date] = None
-    maquina_id: int
+    maquina_id: Optional[int] = None
+    maquina_texto: Optional[str] = None
     turno: int = Field(ge=1, le=3)
 
 
@@ -145,12 +149,15 @@ class FiltracionOut(BaseModel):
 
 class F006RegistroOut(Mediciones):
     id: str
+    orden_produccion: Optional[str] = None
     referencia_id: int
     marca: Optional[str] = None
     fecha: date
-    maquina_id: int
+    maquina_id: Optional[int] = None
+    maquina_texto: Optional[str] = None
     turno: int
     auxiliar_id: Optional[int] = None
+    auxiliar_nombre: Optional[str] = None
     operario_id: Optional[int] = None
     empacador_id: Optional[int] = None
     creado_en: datetime
@@ -166,7 +173,8 @@ class F015MedicionCreate(BaseModel):
     id: Optional[str] = None
     fecha: Optional[date] = None  # solo admin puede fijar fecha manual
     fecha_hora: Optional[datetime] = None  # si no se envía, la fija el servidor
-    punto_medicion_id: int
+    punto_medicion_id: Optional[int] = None
+    punto_texto: Optional[str] = None  # punto (buscar/escribir)
     ph: float = Field(ge=0, le=14)
     cloro: float = Field(ge=0)
     responsable_id: Optional[int] = None
@@ -176,7 +184,8 @@ class F015MedicionCreate(BaseModel):
 class F015MedicionOut(BaseModel):
     id: str
     fecha_hora: datetime
-    punto_medicion_id: int
+    punto_medicion_id: Optional[int] = None
+    punto_texto: Optional[str] = None
     ph: float
     cloro: float
     responsable_id: Optional[int] = None
@@ -248,7 +257,8 @@ class F204RegistroCreate(BaseModel):
     id: Optional[str] = None  # UUID del cliente (idempotencia)
     fecha: Optional[date] = None  # solo admin puede fijar fecha manual
     turno: int = Field(ge=1, le=3)
-    maquina_id: int
+    maquina_id: Optional[int] = None
+    maquina_texto: Optional[str] = None
     referencia_id: int
     marca: Optional[str] = None
     cantidad_clase_b: Optional[int] = Field(default=None, ge=0)
@@ -262,7 +272,8 @@ class F204RegistroOut(BaseModel):
     fecha: date
     fecha_hora: datetime
     turno: int
-    maquina_id: int
+    maquina_id: Optional[int] = None
+    maquina_texto: Optional[str] = None
     referencia_id: int
     marca: Optional[str] = None
     cantidad_clase_b: Optional[int] = None
@@ -352,3 +363,39 @@ class UsuarioUpdate(BaseModel):
 
 class PasswordIn(BaseModel):
     password: str = Field(min_length=4)
+
+
+# --------------------------------------------------------------------------- #
+# Proveedores de papel (configuración)
+# --------------------------------------------------------------------------- #
+class ProveedorPapelOut(BaseModel):
+    id: int
+    nombre: str
+    activo: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProveedorPapelCreate(BaseModel):
+    nombre: str
+
+
+class ProveedorPapelUpdate(BaseModel):
+    nombre: Optional[str] = None
+    activo: Optional[bool] = None
+
+
+# Puntos de medición (configuración F-015)
+class PuntoMedicionAdminOut(BaseModel):
+    id: int
+    nombre: str
+    activo: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PuntoMedicionCreate(BaseModel):
+    nombre: str
+
+
+class PuntoMedicionUpdate(BaseModel):
+    nombre: Optional[str] = None
+    activo: Optional[bool] = None

@@ -67,6 +67,7 @@ def init_db():
     _ensure_persona_sync_columns()
     # Enlace de referencias con dbo.PQRS_Referencias y campo libre de marca en F-006.
     _ensure_columns("referencias", [("origen_id", "INTEGER", "INT NULL")])
+    _ensure_columns("maquinas", [("origen_id", "INTEGER", "INT NULL")])
     _ensure_columns("f006_registro", [("marca", "VARCHAR(80)", "NVARCHAR(80) NULL")])
     # Mediciones del producto (reintroducidas por solicitud del área de calidad).
     _ensure_columns("f006_registro", [
@@ -81,6 +82,18 @@ def init_db():
         ("maquina", "VARCHAR(60)", "NVARCHAR(60) NULL"),
         ("estado_inocuidad", "VARCHAR(4)", "NVARCHAR(4) NULL"),
     ])
+    # Campos "buscar/escribir": máquina en texto (F-006/F-204), punto en texto
+    # (F-015), OP y auxiliar automático (F-006). Se hacen anulables las FK viejas.
+    _ensure_columns("f006_registro", [
+        ("orden_produccion", "VARCHAR(40)", "NVARCHAR(40) NULL"),
+        ("maquina_texto", "VARCHAR(80)", "NVARCHAR(80) NULL"),
+        ("auxiliar_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
+    ])
+    _ensure_columns("f204_registro", [("maquina_texto", "VARCHAR(80)", "NVARCHAR(80) NULL")])
+    _ensure_columns("f015_medicion", [("punto_texto", "VARCHAR(120)", "NVARCHAR(120) NULL")])
+    _make_nullable("f006_registro", "maquina_id", "INT")
+    _make_nullable("f204_registro", "maquina_id", "INT")
+    _make_nullable("f015_medicion", "punto_medicion_id", "INT")
 
 
 def _ensure_columns(tabla: str, columnas: list[tuple[str, str, str]]):
@@ -110,6 +123,28 @@ def _ensure_columns(tabla: str, columnas: list[tuple[str, str, str]]):
                 ).scalar()
                 if existe_col is None:
                     conn.execute(text(f"ALTER TABLE [{DB_SCHEMA}].[{tabla}] ADD {col} {tipo_mssql}"))
+
+
+def _make_nullable(tabla: str, col: str, tipo_mssql: str):
+    """Hace anulable una columna existente (idempotente). Solo SQL Server.
+
+    Necesario para permitir valores de texto libre en campos que antes eran FK
+    obligatorias (máquina, punto de medición). En SQLite no aplica (dev).
+    """
+    if _IS_SQLITE:
+        return
+    with engine.begin() as conn:
+        if conn.execute(text(f"SELECT OBJECT_ID('{DB_SCHEMA}.{tabla}', 'U')")).scalar() is None:
+            return
+        es_nullable = conn.execute(
+            text(
+                "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS "
+                f"WHERE TABLE_SCHEMA = '{DB_SCHEMA}' AND TABLE_NAME = '{tabla}' "
+                f"AND COLUMN_NAME = '{col}'"
+            )
+        ).scalar()
+        if es_nullable == "NO":
+            conn.execute(text(f"ALTER TABLE [{DB_SCHEMA}].[{tabla}] ALTER COLUMN {col} {tipo_mssql} NULL"))
 
 
 def _ensure_persona_sync_columns():

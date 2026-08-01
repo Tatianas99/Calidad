@@ -27,6 +27,7 @@ import mimetypes
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 from .config import (
     AZURE_STORAGE_ACCOUNT,
@@ -141,7 +142,12 @@ def _url_azure(ruta: str) -> str:
         expiry=ahora + timedelta(seconds=SAS_TTL),
         **firma,
     )
-    return f"{AZURE_STORAGE_URL}/{AZURE_STORAGE_CONTAINER}/{ruta}?{sas}"
+    # La ruta va percent-encoded en la URL: hay adjuntos antiguos con espacios y
+    # paréntesis en el nombre ("image002 (3).png") y sin esto el enlace es
+    # inválido y el navegador no los carga. La firma NO se toca: se calcula
+    # sobre el nombre sin codificar, que es justo lo que se le pasó arriba.
+    ruta_url = quote(ruta, safe="/")
+    return f"{AZURE_STORAGE_URL}/{AZURE_STORAGE_CONTAINER}/{ruta_url}?{sas}"
 
 
 # --------------------------------------------------------------------------- #

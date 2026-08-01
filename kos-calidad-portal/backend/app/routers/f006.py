@@ -33,6 +33,7 @@ def crear_registro(
             return existing
     f, _ = fecha_fields(user.rol == "admin", data.fecha)
     kwargs = dict(
+        orden_produccion=data.orden_produccion,
         referencia_id=data.referencia_id,
         marca=data.marca,
         altura_vaso=data.altura_vaso,
@@ -41,6 +42,9 @@ def crear_registro(
         grueso_rim=data.grueso_rim,
         fecha=f,
         maquina_id=data.maquina_id,
+        maquina_texto=data.maquina_texto,
+        # Auxiliar de calidad = persona en turno (usuario en sesión), automático.
+        auxiliar_nombre=user.nombre,
         turno=data.turno,
     )
     if data.id:
@@ -78,8 +82,10 @@ def actualizar_cabecera(
 ):
     """Actualiza la cabecera (referencia, fecha, máquina, turno) de un producto."""
     reg = _get_registro(registro_id, db)
+    reg.orden_produccion = data.orden_produccion
     reg.referencia_id = data.referencia_id
     reg.marca = data.marca
+    reg.maquina_texto = data.maquina_texto
     reg.altura_vaso = data.altura_vaso
     reg.diametro_superior = data.diametro_superior
     reg.diametro_inferior = data.diametro_inferior

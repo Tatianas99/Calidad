@@ -6,8 +6,9 @@ import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
 import OptionButtons from '../../components/OptionButtons'
 import ChecklistCNCNA from '../../components/ChecklistCNCNA'
+import ComboBox from '../../components/ComboBox'
 import { matchKeywords } from '../../lib/fuzzy'
-import type { F158Config, F005Registro } from '../../lib/types'
+import type { F158Config, F005Registro, ProveedorPapel } from '../../lib/types'
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const ESTADO_RES = ['C', 'NC', 'N/A']
@@ -48,6 +49,7 @@ export default function F005Form({
   onEditarConsumido?: () => void
 }) {
   const [config, setConfig] = useState<F158Config | null>(null)
+  const [proveedores, setProveedores] = useState<string[]>([])
   const [guardados, setGuardados] = useState<F005Registro[]>([])
   const [verGuardados, setVerGuardados] = useState(false)
   const [busqGuardados, setBusqGuardados] = useState('')
@@ -62,6 +64,7 @@ export default function F005Form({
 
   useEffect(() => {
     apiGet<F158Config>('/f158/config').then(setConfig).catch(() => {})
+    apiGet<ProveedorPapel[]>('/catalogos/proveedores-papel').then((ps) => setProveedores(ps.map((p) => p.nombre))).catch(() => {})
     cargarGuardados()
   }, [])
 
@@ -268,8 +271,8 @@ export default function F005Form({
 
               <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0' }} />
               <div className="row">
-                <Field label="Proveedor" hint="escribir">
-                  <input value={selected.proveedor ?? ''} onChange={(e) => upd({ proveedor: e.target.value })} />
+                <Field label="Proveedor" hint="buscar o escribir">
+                  <ComboBox value={selected.proveedor ?? ''} onChange={(v) => upd({ proveedor: v })} options={proveedores} placeholder="Buscar o escribir proveedor…" />
                 </Field>
                 <Field label="Responsable" hint="usuario en sesión">
                   <input type="text" value={user?.nombre ?? ''} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />

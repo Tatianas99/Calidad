@@ -7,6 +7,7 @@ import { Field } from '../../components/Field'
 import ChecklistCNCNA from '../../components/ChecklistCNCNA'
 import OptionButtons from '../../components/OptionButtons'
 import ReferenceSearch from '../../components/ReferenceSearch'
+import ComboBox from '../../components/ComboBox'
 import SearchSelect from '../../components/SearchSelect'
 import type { Referencia, Maquina, Persona, Opciones, Option, F006Registro } from '../../lib/types'
 
@@ -26,6 +27,7 @@ type LocalFiltracion = {
 }
 type Producto = {
   registroId: string
+  orden_produccion?: string
   referencia_id?: number
   marca?: string
   altura_vaso?: string
@@ -33,13 +35,12 @@ type Producto = {
   diametro_inferior?: string
   grueso_rim?: string
   fecha: string
-  maquina_id?: number
+  maquina?: string        // máquina (buscar/escribir)
   turno?: number
   guardado: boolean
   finalizado?: boolean
   embalaje: Record<string, string>
   filtraciones: LocalFiltracion[]
-  auxiliar_id?: number
   operario_id?: number
   empacador_id?: number
   createdAt: number
@@ -90,6 +91,7 @@ export default function F006Form({
           if (s.productos.some((p) => p.registroId === r.id)) return { ...s, seleccionadoId: r.id }
           const prod: Producto = {
             registroId: r.id,
+            orden_produccion: r.orden_produccion ?? undefined,
             referencia_id: r.referencia_id,
             marca: r.marca ?? undefined,
             altura_vaso: r.altura_vaso ?? undefined,
@@ -97,7 +99,7 @@ export default function F006Form({
             diametro_inferior: r.diametro_inferior ?? undefined,
             grueso_rim: r.grueso_rim ?? undefined,
             fecha: r.fecha,
-            maquina_id: r.maquina_id,
+            maquina: r.maquina_texto ?? (r.maquina_id ? maqs.find((m) => m.id === r.maquina_id)?.nombre : undefined),
             turno: r.turno,
             guardado: true,
             embalaje: Object.fromEntries(r.embalaje.map((e) => [e.item, e.resultado])),
@@ -112,7 +114,6 @@ export default function F006Form({
               cantidad_nocumple: f.cantidad_nocumple ?? undefined,
               comentario: f.comentario ?? undefined,
             })),
-            auxiliar_id: r.auxiliar_id ?? undefined,
             operario_id: r.operario_id ?? undefined,
             empacador_id: r.empacador_id ?? undefined,
             createdAt: Date.now(),
@@ -140,7 +141,6 @@ export default function F006Form({
   // Etiqueta del producto: referencia + marca (usar en todas las secciones).
   const prodLabel = (p: { referencia_id?: number; marca?: string }) =>
     refLabel(p.referencia_id) + (p.marca ? ` ${p.marca}` : '')
-  const maqLabel = (id?: number) => maqs.find((m) => m.id === id)?.nombre ?? ''
 
   const mapProd = (id: string, fn: (p: Producto) => Producto) =>
     setSt((s) => ({ ...s, productos: s.productos.map((p) => (p.registroId === id ? fn(p) : p)) }))
@@ -165,10 +165,11 @@ export default function F006Form({
   }
 
   async function maybeGuardarCabecera(prod: Producto) {
-    if (!prod.referencia_id || !prod.maquina_id || !prod.turno) return
+    if (!prod.referencia_id || !prod.maquina || !prod.turno) return
     const body = {
+      orden_produccion: prod.orden_produccion ?? null,
       referencia_id: prod.referencia_id, marca: prod.marca ?? null, fecha: prod.fecha,
-      maquina_id: prod.maquina_id, turno: prod.turno,
+      maquina_texto: prod.maquina ?? null, turno: prod.turno,
       altura_vaso: prod.altura_vaso ?? null, diametro_superior: prod.diametro_superior ?? null,
       diametro_inferior: prod.diametro_inferior ?? null, grueso_rim: prod.grueso_rim ?? null,
     }
@@ -235,7 +236,7 @@ export default function F006Form({
     if (!p) return
     if (!p.guardado) await maybeGuardarCabecera(p)
     const r = await apiMutate('PUT', `/f006/registros/${prodId}/firmas`, {
-      auxiliar_id: p.auxiliar_id, operario_id: p.operario_id, empacador_id: p.empacador_id,
+      operario_id: p.operario_id, empacador_id: p.empacador_id,
     })
     // Al finalizar, el producto se retira de la lista de activos del turno
     // (ya quedó guardado; se consulta en "Ver registros F-006").
@@ -274,7 +275,7 @@ export default function F006Form({
                 >
                   <span className="pt">{prodLabel(p)}</span>
                   <span className="pm">
-                    {p.maquina_id ? maqLabel(p.maquina_id) : 'Sin máquina'} · {p.turno ? `T${p.turno}` : 'sin turno'} · {p.filtraciones.length} prueba(s){p.guardado ? '' : ' · sin guardar'}
+                    {p.maquina || 'Sin máquina'} · {p.turno ? `T${p.turno}` : 'sin turno'} · {p.filtraciones.length} prueba(s){p.guardado ? '' : ' · sin guardar'}
                   </span>
                   {listas.length > 0 ? (
                     <span className="prod-alert urgente">⏱ {listas.length} por registrar</span>
@@ -346,11 +347,10 @@ function ProductoDetalle({
   const [tab, setTab] = useState<Tab>('pe')
   const admin = getUser()?.rol === 'admin'
   const porRol = (rol: string) => personas.filter((p) => p.rol === rol)
-  const cabeceraCompleta = !!(prod.referencia_id && prod.maquina_id && prod.turno)
+  const cabeceraCompleta = !!(prod.referencia_id && prod.maquina && prod.turno)
   const faltantesEmb = opts ? opts.embalaje_f006.filter((o) => !prod.embalaje[o.value]) : []
 
   const firmasFaltan: string[] = []
-  if (!prod.auxiliar_id) firmasFaltan.push('Auxiliar')
   if (!prod.operario_id) firmasFaltan.push('Operario')
   if (!prod.empacador_id) firmasFaltan.push('Empacador')
   const puedeFinalizar = faltantesEmb.length === 0 && firmasFaltan.length === 0
@@ -374,6 +374,9 @@ function ProductoDetalle({
       {tab === 'pe' && (
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Producto</h3>
+          <Field label="Orden de producción" hint="escribir (va primero)">
+            <input value={prod.orden_produccion ?? ''} onChange={(e) => onPatch({ orden_produccion: e.target.value })} onBlur={() => onCabecera({})} />
+          </Field>
           <div className="row">
             <Field label="Referencia" hint="busca por palabras clave">
               <ReferenceSearch referencias={refs} value={prod.referencia_id} onChange={(id) => onCabecera({ referencia_id: id })} />
@@ -388,11 +391,8 @@ function ProductoDetalle({
                 ? <input type="date" value={prod.fecha} onChange={(e) => onCabecera({ fecha: e.target.value })} />
                 : <input type="text" value={new Date(prod.fecha + 'T00:00:00').toLocaleDateString('es-CO')} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />}
             </Field>
-            <Field label="Máquina">
-              <select value={prod.maquina_id ?? ''} onChange={(e) => onCabecera({ maquina_id: Number(e.target.value) })}>
-                <option value="">Seleccionar…</option>
-                {maqs.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-              </select>
+            <Field label="Máquina" hint="buscar o escribir">
+              <ComboBox value={prod.maquina ?? ''} onChange={(v) => onCabecera({ maquina: v })} options={maqs.map((m) => m.nombre)} placeholder="Buscar o escribir máquina…" />
             </Field>
             <Field label="Turno">
               <select value={prod.turno ?? ''} onChange={(e) => onCabecera({ turno: Number(e.target.value) })}>
@@ -451,15 +451,10 @@ function ProductoDetalle({
       {tab === 'firmas' && (
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Firmas</h3>
-          <p className="muted">Selecciona quién realizó este producto (puede variar según la referencia).</p>
+          <p className="muted">El auxiliar de calidad se registra automáticamente con la persona en turno (usuario en sesión).</p>
           <div className="row">
-            <Field label="Auxiliar de calidad" hint="busca por nombre">
-              <SearchSelect
-                items={porRol('auxiliar').map((p) => ({ id: p.id, label: p.nombre }))}
-                value={prod.auxiliar_id}
-                onChange={(id) => onFirmas({ auxiliar_id: id })}
-                placeholder="Buscar auxiliar…"
-              />
+            <Field label="Auxiliar de calidad" hint="automático · persona en turno">
+              <input type="text" value={getUser()?.nombre ?? ''} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />
             </Field>
             <Field label="Operario(a)" hint="busca por nombre">
               <SearchSelect

@@ -281,19 +281,17 @@ textarea { min-height: 70px; resize: vertical; }
   padding: 14px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 70vh;
 }
 @media (max-width: 820px) {
-  .mainnav { flex-direction: row; flex-wrap: wrap; align-items: center; min-height: 0;
-    border-right: none; border-bottom: 1px solid var(--border); }
+  /* En móvil el menú va vertical (una opción por línea), a todo el ancho, y como
+     está contraído por defecto no ocupa espacio hasta que se abre con ☰. */
+  .mainnav { min-height: 0; border-right: none; border-bottom: 1px solid var(--border); }
 }
 .nav-sec { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 12px 8px 2px; font-weight: 700; }
-@media (max-width: 820px) { .nav-sec { width: 100%; margin: 6px 8px 0; } }
-.nav-item { text-align: left; background: none; border: none; color: var(--text); font: inherit; font-weight: 600; padding: 11px 12px; border-radius: 10px; cursor: pointer; }
+.nav-item { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text); font: inherit; font-weight: 600; padding: 11px 12px; border-radius: 10px; cursor: pointer; }
 .nav-item:hover { background: var(--surface-2); }
 .nav-item.active { background: var(--brand); color: var(--brand-ink); }
 .nav-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
-@media (max-width: 820px) { .nav-foot { margin-top: 0; border-top: none; width: 100%; display: flex; align-items: center; gap: 10px; } }
 .nav-user { font-size: .85rem; font-weight: 600; margin: 6px 8px; }
 .nav-logout { width: 100%; }
-@media (max-width: 820px) { .nav-logout { width: auto; } }
 
 /* ---- Tablas filtrables ---- */
 .table-wrap { overflow-x: auto; }
@@ -341,6 +339,20 @@ textarea { min-height: 70px; resize: vertical; }
 .user-actions .btn { min-height: 40px; padding: 8px 12px; }
 .perm-list { display: flex; flex-wrap: wrap; gap: 10px; }
 .perm { display: flex; align-items: center; gap: 6px; font-size: .88rem; background: var(--surface-2); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+
+/* ---- Configuración (pestañas tipo chip) ---- */
+.cfg-tabs { display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+.cfg-tab {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-2); color: inherit; font: inherit;
+  font-weight: 600; font-size: .92rem; cursor: pointer; transition: .12s;
+}
+.cfg-tab:hover { border-color: var(--accent); }
+.cfg-tab.active { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+.cfg-tab-ico { font-size: 1rem; }
+@media (prefers-color-scheme: dark) { .cfg-tab.active { background: #1e2f4a; border-color: #2f4d7a; color: #bfdbfe; } }
+:root[data-theme="light"] .cfg-tab.active { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+:root[data-theme="dark"] .cfg-tab.active { background: #1e2f4a; border-color: #2f4d7a; color: #bfdbfe; }
 
 /* ---- F-158 Rutas Calidad ---- */
 .proc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 8px; }

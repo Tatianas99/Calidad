@@ -13,15 +13,18 @@ import RegistrosF015 from './views/RegistrosF015'
 import RegistrosF158 from './views/RegistrosF158'
 import RegistrosF204 from './views/RegistrosF204'
 import RegistrosF005 from './views/RegistrosF005'
-import Usuarios from './views/Usuarios'
+import Configuracion from './views/Configuracion'
 import { CupsIcon, WaterTestIcon, BadgeIcon, TrashIcon, RollIcon } from './components/FormIcons'
 
-type View = 'home' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'usuarios'
+type View = 'home' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config'
 
 export default function App() {
   const [user, setUser] = useState<Usuario | null>(getUser())
   const [view, setView] = useState<View>('home')
-  const [navOpen, setNavOpen] = useState(true)
+  // En móvil el menú arranca contraído (ocupa mucho espacio); en escritorio abierto.
+  const [navOpen, setNavOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 820 : true))
+  // Navegar y, en móvil, cerrar el menú para dejar ver el contenido.
+  const irA = (v: View) => { setView(v); if (typeof window !== 'undefined' && window.innerWidth <= 820) setNavOpen(false) }
   const [f005Edit, setF005Edit] = useState<string | null>(null)
   const [f006Edit, setF006Edit] = useState<string | null>(null)
   const [f015Edit, setF015Edit] = useState<string | null>(null)
@@ -41,20 +44,20 @@ export default function App() {
 
   const nav = (
     <nav className="mainnav">
-      <NavItem label="Inicio" active={view === 'home'} onClick={() => setView('home')} />
+      <NavItem label="Inicio" active={view === 'home'} onClick={() => irA('home')} />
 
       {(hasPermiso('registrar_f005') || hasPermiso('registrar_f006') || hasPermiso('registrar_f015') || hasPermiso('registrar_f158') || hasPermiso('registrar_f204')) && <div className="nav-sec">Registrar</div>}
-      {hasPermiso('registrar_f005') && <NavItem label="F-005 Liberación de rollos" active={view === 'f005'} onClick={() => setView('f005')} />}
-      {hasPermiso('registrar_f006') && <NavItem label="F-006 Pruebas filtración" active={view === 'f006'} onClick={() => setView('f006')} />}
-      {hasPermiso('registrar_f015') && <NavItem label="F-015 Cloro/PH" active={view === 'f015'} onClick={() => setView('f015')} />}
-      {hasPermiso('registrar_f158') && <NavItem label="F-158 Rutas Calidad" active={view === 'f158'} onClick={() => setView('f158')} />}
-      {hasPermiso('registrar_f204') && <NavItem label="F-204 Clase B y desperdicio" active={view === 'f204'} onClick={() => setView('f204')} />}
+      {hasPermiso('registrar_f005') && <NavItem label="F-005 Liberación de rollos" active={view === 'f005'} onClick={() => irA('f005')} />}
+      {hasPermiso('registrar_f006') && <NavItem label="F-006 Pruebas filtración" active={view === 'f006'} onClick={() => irA('f006')} />}
+      {hasPermiso('registrar_f015') && <NavItem label="F-015 Cloro/PH" active={view === 'f015'} onClick={() => irA('f015')} />}
+      {hasPermiso('registrar_f158') && <NavItem label="F-158 Rutas Calidad" active={view === 'f158'} onClick={() => irA('f158')} />}
+      {hasPermiso('registrar_f204') && <NavItem label="F-204 Clase B y desperdicio" active={view === 'f204'} onClick={() => irA('f204')} />}
 
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
-      {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204'].includes(view)} onClick={() => setView('reportes')} />}
+      {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204'].includes(view)} onClick={() => irA('reportes')} />}
 
       {hasPermiso('gestionar_usuarios') && <div className="nav-sec">Administración</div>}
-      {hasPermiso('gestionar_usuarios') && <NavItem label="Usuarios" active={view === 'usuarios'} onClick={() => setView('usuarios')} />}
+      {hasPermiso('gestionar_usuarios') && <NavItem label="Configuraciones" active={view === 'config'} onClick={() => irA('config')} />}
 
       <div className="nav-foot">
         <div className="nav-user">👤 {user.nombre}<span className="muted"> · {user.rol}</span></div>
@@ -85,7 +88,7 @@ export default function App() {
           {view === 'reg015' && <RegistrosF015 onBack={() => setView('reportes')} onEditar={(id) => { setF015Edit(id); setView('f015') }} />}
           {view === 'reg158' && <RegistrosF158 onBack={() => setView('reportes')} onEditar={(id) => { setF158Edit(id); setView('f158') }} />}
           {view === 'reg204' && <RegistrosF204 onBack={() => setView('reportes')} onEditar={(id) => { setF204Edit(id); setView('f204') }} />}
-          {view === 'usuarios' && <Usuarios />}
+          {view === 'config' && <Configuracion />}
         </main>
       </div>
     </div>

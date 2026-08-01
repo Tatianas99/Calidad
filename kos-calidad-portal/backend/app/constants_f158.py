@@ -196,10 +196,20 @@ PROCESOS_KEYS = {p["key"] for p in PROCESOS_F158}
 PROCESO_LABEL = {p["key"]: p["label"] for p in PROCESOS_F158}
 
 
-def config_f158() -> dict:
-    """Estructura que consume el frontend para renderizar el formato."""
+def config_f158(maquinas_formacion=None) -> dict:
+    """Estructura que consume el frontend para renderizar el formato.
+
+    `maquinas_formacion`: si se pasa una lista no vacía, se usa como máquinas del
+    proceso Formación (viene de la tabla `maquinas`); si no, quedan las de defecto.
+    """
+    procesos = PROCESOS_F158
+    if maquinas_formacion:
+        procesos = [
+            {**p, "maquinas": list(maquinas_formacion)} if p["key"] == "formacion" else p
+            for p in PROCESOS_F158
+        ]
     return {
-        "procesos": PROCESOS_F158,
+        "procesos": procesos,
         "materiales": MATERIALES,
         "calibres": CALIBRES,
         "resultados": RESULTADOS_F158,

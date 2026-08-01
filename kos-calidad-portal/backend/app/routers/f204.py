@@ -42,6 +42,7 @@ def crear_registro(
         fecha_hora=fh,
         turno=data.turno,
         maquina_id=data.maquina_id,
+        maquina_texto=data.maquina_texto,
         referencia_id=data.referencia_id,
         marca=data.marca,
         cantidad_clase_b=data.cantidad_clase_b,
@@ -94,6 +95,7 @@ def editar_registro(
         raise HTTPException(status_code=404, detail="Registro no encontrado")
     reg.turno = data.turno
     reg.maquina_id = data.maquina_id
+    reg.maquina_texto = data.maquina_texto
     reg.referencia_id = data.referencia_id
     reg.marca = data.marca
     reg.cantidad_clase_b = data.cantidad_clase_b

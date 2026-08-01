@@ -15,7 +15,8 @@ from .db import init_db, SessionLocal
 from .auth import get_current_user
 from .personal import sync_personas
 from .referencias_sync import sync_referencias
-from .routers import catalogos, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios
+from .maquinas_sync import sync_maquinas
+from .routers import catalogos, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios, proveedores, puntos
 
 log = logging.getLogger("uvicorn.error")
 
@@ -32,6 +33,7 @@ async def lifespan(app: FastAPI):
         try:
             sync_personas(db)
             sync_referencias(db)
+            sync_maquinas(db)
         finally:
             db.close()
     except Exception:
@@ -81,6 +83,8 @@ app.include_router(f158.router, dependencies=_auth)
 app.include_router(f204.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
 app.include_router(usuarios.router)  # ya exige permiso gestionar_usuarios internamente
+app.include_router(proveedores.router)  # idem (configuración, solo admin)
+app.include_router(puntos.router)  # idem
 
 # Build del frontend (frontend/dist copiado aquí en el pipeline de despliegue).
 # Se monta al final para que las rutas de la API definidas arriba tengan prioridad.

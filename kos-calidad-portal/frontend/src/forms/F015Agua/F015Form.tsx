@@ -4,6 +4,7 @@ import { uuid } from '../../lib/uuid'
 import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
 import SearchSelect from '../../components/SearchSelect'
+import ComboBox from '../../components/ComboBox'
 import type { Persona, PuntoMedicion, F015Medicion } from '../../lib/types'
 
 const PH_MIN = 6.5, PH_MAX = 8.5
@@ -25,7 +26,7 @@ export default function F015Form({
   const admin = getUser()?.rol === 'admin'
   const [fechaManual, setFechaManual] = useState(hoy())
   const [editId, setEditId] = useState<string | null>(null)
-  const [puntoId, setPuntoId] = useState('')
+  const [punto, setPunto] = useState('')
   const [ph, setPh] = useState('')
   const [cloro, setCloro] = useState('')
   const [responsableId, setResponsableId] = useState('')
@@ -46,7 +47,7 @@ export default function F015Form({
     apiGet<F015Medicion>(`/f015/mediciones/${editarId}`)
       .then((m) => {
         setEditId(m.id)
-        setPuntoId(String(m.punto_medicion_id))
+        setPunto(m.punto_texto || nombrePunto(m.punto_medicion_id))
         setPh(String(m.ph))
         setCloro(String(m.cloro))
         setResponsableId(m.responsable_id ? String(m.responsable_id) : '')
@@ -58,7 +59,7 @@ export default function F015Form({
   }, [editarId])
 
   const cancelarEdicion = () => {
-    setEditId(null); setPuntoId(''); setPh(''); setCloro(''); setResponsableId(''); setComentario('')
+    setEditId(null); setPunto(''); setPh(''); setCloro(''); setResponsableId(''); setComentario('')
   }
 
   const flash = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(''), 2500) }
@@ -69,9 +70,9 @@ export default function F015Form({
   const cloroFuera = cloro !== '' && (cloroNum < CLORO_MIN || cloroNum > CLORO_MAX)
 
   async function guardar() {
-    if (!puntoId || ph === '' || cloro === '') { flash('Completa punto, PH y cloro'); return }
+    if (!punto.trim() || ph === '' || cloro === '') { flash('Completa punto, PH y cloro'); return }
     const body = {
-      punto_medicion_id: Number(puntoId),
+      punto_texto: punto.trim(),
       ph: phNum,
       cloro: cloroNum,
       responsable_id: responsableId ? Number(responsableId) : null,
@@ -89,7 +90,7 @@ export default function F015Form({
     cargarLista()
   }
 
-  const nombrePunto = (id: number) => puntos.find((p) => p.id === id)?.nombre ?? `#${id}`
+  const nombrePunto = (id?: number | null) => (id ? puntos.find((p) => p.id === id)?.nombre ?? `#${id}` : '')
 
   return (
     <div className="narrow">
@@ -113,11 +114,8 @@ export default function F015Form({
           </Field>
         )}
         <div className="row">
-          <Field label="Punto de medición">
-            <select value={puntoId} onChange={(e) => setPuntoId(e.target.value)}>
-              <option value="">Seleccionar…</option>
-              {puntos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
+          <Field label="Punto de medición" hint="buscar o escribir">
+            <ComboBox value={punto} onChange={setPunto} options={puntos.map((p) => p.nombre)} placeholder="Buscar o escribir punto…" />
           </Field>
           <Field label="Responsable" hint="busca por nombre">
             <SearchSelect
@@ -156,7 +154,7 @@ export default function F015Form({
         {lista.map((m) => (
           <div className="list-item" key={m.id}>
             <div>
-              <strong>{nombrePunto(m.punto_medicion_id)}</strong>
+              <strong>{m.punto_texto || nombrePunto(m.punto_medicion_id)}</strong>
               <div className="muted">{new Date(m.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>
             <div style={{ textAlign: 'right' }}>

@@ -7,6 +7,7 @@ from ..db import get_db
 from .. import models, schemas
 from ..personal import sync_personas
 from ..referencias_sync import sync_referencias
+from ..maquinas_sync import sync_maquinas
 from ..constants import (
     as_options, EMBALAJE_ITEMS_F006, TIPOS_PRUEBA_F006, TIPOS_MATERIAL_F006, RESULTADOS,
 )
@@ -38,6 +39,12 @@ def maquinas(db: Session = Depends(get_db)):
     )
 
 
+@router.post("/maquinas/sync")
+def maquinas_sync(db: Session = Depends(get_db)):
+    """Re-sincroniza el catálogo de máquinas desde kos_apps.dbo.maquinas."""
+    return sync_maquinas(db)
+
+
 @router.get("/referencias", response_model=list[schemas.ReferenciaOut])
 def referencias(db: Session = Depends(get_db)):
     return (
@@ -60,6 +67,17 @@ def puntos_medicion(db: Session = Depends(get_db)):
         db.query(models.PuntoMedicion)
         .filter(models.PuntoMedicion.activo == True)
         .order_by(models.PuntoMedicion.nombre)
+        .all()
+    )
+
+
+@router.get("/proveedores-papel", response_model=list[schemas.ProveedorPapelOut])
+def proveedores_papel(db: Session = Depends(get_db)):
+    """Lista de proveedores de papel activos (para el desplegable del F-005)."""
+    return (
+        db.query(models.ProveedorPapel)
+        .filter(models.ProveedorPapel.activo == True)
+        .order_by(models.ProveedorPapel.nombre)
         .all()
     )
 

@@ -7,6 +7,7 @@ import { Field } from '../../components/Field'
 import OptionButtons from '../../components/OptionButtons'
 import ReferenceSearch from '../../components/ReferenceSearch'
 import SearchSelect from '../../components/SearchSelect'
+import ComboBox from '../../components/ComboBox'
 import type { Referencia, Maquina, Persona, F204Registro } from '../../lib/types'
 
 const RESULTADOS = ['C', 'NC', 'NA']
@@ -17,7 +18,7 @@ type Entrada = {
   editId?: string
   fecha?: string          // solo admin puede editarla
   turno?: number
-  maquina_id?: number
+  maquina?: string        // máquina (buscar/escribir)
   referencia_id?: number
   marca?: string
   cantidad_clase_b?: string
@@ -58,7 +59,8 @@ export default function F204Form({
         setSt((s) => {
           if (s.entradas.some((e) => e.editId === r.id)) return { ...s, seleccionadoId: s.entradas.find((e) => e.editId === r.id)!.localId }
           const nueva: Entrada = {
-            localId: uuid(), editId: r.id, fecha: r.fecha, turno: r.turno, maquina_id: r.maquina_id,
+            localId: uuid(), editId: r.id, fecha: r.fecha, turno: r.turno,
+            maquina: r.maquina_texto ?? (r.maquina_id ? maqs.find((m) => m.id === r.maquina_id)?.nombre : undefined),
             referencia_id: r.referencia_id, marca: r.marca ?? undefined,
             cantidad_clase_b: r.cantidad_clase_b != null ? String(r.cantidad_clase_b) : undefined,
             verificacion: r.verificacion_desperdicio ?? undefined,
@@ -79,8 +81,6 @@ export default function F204Form({
     const r = refs.find((x) => x.id === id)
     return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : 'Sin referencia'
   }
-  const maqLabel = (id?: number) => maqs.find((m) => m.id === id)?.nombre ?? 'Sin máquina'
-
   const selected = st.entradas.find((e) => e.localId === st.seleccionadoId)
   const patch = (id: string, p: Partial<Entrada>) =>
     setSt((s) => ({ ...s, entradas: s.entradas.map((e) => (e.localId === id ? { ...e, ...p } : e)) }))
@@ -101,7 +101,7 @@ export default function F204Form({
   const faltan = (e: Entrada): string[] => {
     const f: string[] = []
     if (!e.turno) f.push('Turno')
-    if (!e.maquina_id) f.push('Máquina')
+    if (!e.maquina || !e.maquina.trim()) f.push('Máquina')
     if (!e.referencia_id) f.push('Referencia')
     if (!e.entregado_por_id) f.push('Entregado por')
     return f
@@ -110,7 +110,7 @@ export default function F204Form({
   async function finalizar(e: Entrada) {
     if (faltan(e).length) { flash(`Faltan campos: ${faltan(e).join(', ')}`); return }
     const body = {
-      turno: e.turno, maquina_id: e.maquina_id, referencia_id: e.referencia_id,
+      turno: e.turno, maquina_texto: e.maquina ?? null, referencia_id: e.referencia_id,
       marca: e.marca ?? null,
       cantidad_clase_b: e.cantidad_clase_b != null && e.cantidad_clase_b !== '' ? Number(e.cantidad_clase_b) : null,
       verificacion_desperdicio: e.verificacion ?? null,
@@ -129,7 +129,7 @@ export default function F204Form({
   }
 
   const resumen = (e: Entrada) =>
-    (e.turno ? `T${e.turno}` : 'Sin turno') + ' · ' + maqLabel(e.maquina_id)
+    (e.turno ? `T${e.turno}` : 'Sin turno') + ' · ' + (e.maquina || 'Sin máquina')
 
   return (
     <div>
@@ -183,11 +183,8 @@ export default function F204Form({
                     {[1, 2, 3].map((t) => <option key={t} value={t}>Turno {t}</option>)}
                   </select>
                 </Field>
-                <Field label="Máquina">
-                  <select value={selected.maquina_id ?? ''} onChange={(e) => upd({ maquina_id: Number(e.target.value) })}>
-                    <option value="">Seleccionar…</option>
-                    {maqs.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                  </select>
+                <Field label="Máquina" hint="buscar o escribir">
+                  <ComboBox value={selected.maquina ?? ''} onChange={(v) => upd({ maquina: v })} options={maqs.map((m) => m.nombre)} placeholder="Buscar o escribir máquina…" />
                 </Field>
               </div>
 

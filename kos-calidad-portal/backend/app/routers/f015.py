@@ -30,6 +30,7 @@ def crear_medicion(
     kwargs = dict(
         fecha_hora=data.fecha_hora or fh,
         punto_medicion_id=data.punto_medicion_id,
+        punto_texto=data.punto_texto,
         ph=data.ph,
         cloro=data.cloro,
         responsable_id=data.responsable_id,
@@ -64,6 +65,7 @@ def actualizar_medicion(
     if not m:
         raise HTTPException(status_code=404, detail="Medición no encontrada")
     m.punto_medicion_id = data.punto_medicion_id
+    m.punto_texto = data.punto_texto
     m.ph = data.ph
     m.cloro = data.cloro
     m.responsable_id = data.responsable_id

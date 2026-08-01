@@ -31,7 +31,7 @@ export default function RegistrosF015({ onEditar, onBack }: { onEditar?: (id: st
     cargar()
   }, [])
 
-  const puntoName = (id: number) => puntos.find((p) => p.id === id)?.nombre ?? `#${id}`
+  const puntoName = (id?: number | null) => (id ? puntos.find((p) => p.id === id)?.nombre ?? `#${id}` : '')
   const personaName = (id?: number | null) => (id ? personas.find((p) => p.id === id)?.nombre ?? `#${id}` : '—')
 
   async function borrar(r: F015Medicion) {
@@ -46,7 +46,7 @@ export default function RegistrosF015({ onEditar, onBack }: { onEditar?: (id: st
 
   const columns: Col<F015Medicion>[] = useMemo(() => [
     { key: 'fecha', label: 'Fecha y hora', value: (r) => fechaHora(r.fecha_hora) },
-    { key: 'punto', label: 'Punto', value: (r) => puntoName(r.punto_medicion_id) },
+    { key: 'punto', label: 'Punto', value: (r) => r.punto_texto || puntoName(r.punto_medicion_id) },
     {
       key: 'ph', label: 'PH', value: (r) => String(r.ph),
       render: (r) => <span className={r.ph_en_rango ? 'tag-ok' : 'tag-bad'}>{r.ph}</span>,

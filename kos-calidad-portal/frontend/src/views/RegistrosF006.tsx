@@ -48,7 +48,7 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
     const r = refs.find((x) => x.id === id)
     return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : `#${id}`
   }
-  const maqName = (id: number) => maqs.find((m) => m.id === id)?.nombre ?? `#${id}`
+  const maqName = (id?: number | null) => (id ? maqs.find((m) => m.id === id)?.nombre ?? `#${id}` : '')
   const personaName = (id?: number | null) => (id ? personas.find((p) => p.id === id)?.nombre ?? `#${id}` : '—')
 
   const sum = (r: F006Registro, key: 'cantidad_muestra' | 'cantidad_cumple' | 'cantidad_nocumple') =>
@@ -57,10 +57,11 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
   const columns: Col<F006Registro>[] = useMemo(() => [
     { key: 'fecha', label: 'Fecha', value: (r) => r.fecha },
     { key: 'turno', label: 'Turno', value: (r) => `T${r.turno}` },
-    { key: 'maquina', label: 'Máquina', value: (r) => maqName(r.maquina_id) },
+    { key: 'op', label: 'OP', value: (r) => r.orden_produccion ?? '' },
+    { key: 'maquina', label: 'Máquina', value: (r) => r.maquina_texto || maqName(r.maquina_id) },
     { key: 'referencia', label: 'Referencia', value: (r) => refName(r.referencia_id) },
     { key: 'marca', label: 'Marca', value: (r) => r.marca ?? '' },
-    { key: 'auxiliar', label: 'Auxiliar', value: (r) => personaName(r.auxiliar_id) },
+    { key: 'auxiliar', label: 'Auxiliar', value: (r) => r.auxiliar_nombre || personaName(r.auxiliar_id) },
     { key: 'muestra', label: 'Muestra', value: (r) => String(sum(r, 'cantidad_muestra')) },
     { key: 'cumple', label: 'Cumple', value: (r) => String(sum(r, 'cantidad_cumple')) },
     { key: 'nocumple', label: 'No cumple', value: (r) => String(sum(r, 'cantidad_nocumple')) },

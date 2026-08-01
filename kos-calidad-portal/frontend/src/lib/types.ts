@@ -7,6 +7,7 @@ export type Referencia = {
   tipo_producto?: string | null
 }
 export type PuntoMedicion = { id: number; nombre: string }
+export type ProveedorPapel = { id: number; nombre: string; activo: boolean }
 export type Option = { value: string; label: string }
 
 export type Opciones = {
@@ -32,6 +33,7 @@ export type Filtracion = {
 
 export type F006Registro = {
   id: string
+  orden_produccion?: string | null
   referencia_id: number
   marca?: string | null
   altura_vaso?: string | null
@@ -39,9 +41,11 @@ export type F006Registro = {
   diametro_inferior?: string | null
   grueso_rim?: string | null
   fecha: string
-  maquina_id: number
+  maquina_id?: number | null
+  maquina_texto?: string | null
   turno: number
   auxiliar_id?: number | null
+  auxiliar_nombre?: string | null
   operario_id?: number | null
   empacador_id?: number | null
   creado_en: string
@@ -52,7 +56,8 @@ export type F006Registro = {
 export type F015Medicion = {
   id: string
   fecha_hora: string
-  punto_medicion_id: number
+  punto_medicion_id?: number | null
+  punto_texto?: string | null
   ph: number
   cloro: number
   responsable_id?: number | null
@@ -96,7 +101,8 @@ export type F204Registro = {
   fecha: string
   fecha_hora: string
   turno: number
-  maquina_id: number
+  maquina_id?: number | null
+  maquina_texto?: string | null
   referencia_id: number
   marca?: string | null
   cantidad_clase_b?: number | null

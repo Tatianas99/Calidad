@@ -81,11 +81,6 @@ export default function Usuarios() {
 
   return (
     <div>
-      <div className="section-title">
-        <span className="code">⚙</span>
-        <h2>Usuarios</h2>
-      </div>
-
       {/* Crear usuario */}
       <div className="panel">
         <h3 style={{ marginTop: 0 }}>Nuevo usuario</h3>

@@ -32,7 +32,8 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
     const r = refs.find((x) => x.id === id)
     return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : `#${id}`
   }
-  const maqName = (id: number) => maqs.find((m) => m.id === id)?.nombre ?? `#${id}`
+  const maqName = (id?: number | null) => (id ? maqs.find((m) => m.id === id)?.nombre ?? `#${id}` : '')
+  const maquinaDe = (r: F204Registro) => r.maquina_texto || maqName(r.maquina_id)
 
   async function borrar(r: F204Registro) {
     if (!window.confirm('¿Borrar este registro F-204? Esta acción no se puede deshacer.')) return
@@ -47,7 +48,7 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
       { key: 'fecha', label: 'Fecha', value: (r) => fh(r.fecha_hora).fecha },
       { key: 'hora', label: 'Hora', value: (r) => fh(r.fecha_hora).hora },
       { key: 'turno', label: 'Turno', value: (r) => `T${r.turno}` },
-      { key: 'maquina', label: 'Máquina', value: (r) => maqName(r.maquina_id) },
+      { key: 'maquina', label: 'Máquina', value: (r) => maquinaDe(r) },
       { key: 'referencia', label: 'Referencia', value: (r) => refName(r.referencia_id) },
       { key: 'marca', label: 'Marca', value: (r) => r.marca ?? '' },
       { key: 'claseb', label: 'Clase B', value: (r) => (r.cantidad_clase_b != null ? String(r.cantidad_clase_b) : '') },
@@ -69,7 +70,7 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
   const renderDetail = (r: F204Registro) => (
     <div className="detalle">
       <div style={{ gridColumn: '1 / -1' }} className="muted">
-        {fh(r.fecha_hora).fecha} {fh(r.fecha_hora).hora} · Turno {r.turno} · {maqName(r.maquina_id)}
+        {fh(r.fecha_hora).fecha} {fh(r.fecha_hora).hora} · Turno {r.turno} · {maquinaDe(r)}
       </div>
       <div style={{ gridColumn: '1 / -1' }}>
         <div className="emb-grid">
