@@ -8,17 +8,28 @@ from . import models
 from .auth import hash_password
 
 
+def seed_admin(db):
+    """Crea el usuario administrador inicial si todavía no hay ningún usuario.
+
+    Se llama en cada arranque de la app (ver main.py) además de en `seed()`,
+    para que el primer login funcione en un despliegue nuevo sin tener que
+    correr `python -m app.seed` manualmente contra la base de producción.
+    """
+    if db.query(models.Usuario).count() == 0:
+        # Usuario administrador inicial (CAMBIAR la contraseña tras el primer ingreso).
+        db.add(models.Usuario(
+            username="admin", nombre="Administrador",
+            password_hash=hash_password("Kos2026*"),
+            rol="admin", permisos="[]", activo=True,
+        ))
+        db.commit()
+
+
 def seed():
     init_db()
     db = SessionLocal()
     try:
-        if db.query(models.Usuario).count() == 0:
-            # Usuario administrador inicial (CAMBIAR la contraseña tras el primer ingreso).
-            db.add(models.Usuario(
-                username="admin", nombre="Administrador",
-                password_hash=hash_password("Kos2026*"),
-                rol="admin", permisos="[]", activo=True,
-            ))
+        seed_admin(db)
         if db.query(models.Persona).count() == 0:
             db.add_all([
                 models.Persona(nombre="Ana Ramírez", rol="auxiliar"),
