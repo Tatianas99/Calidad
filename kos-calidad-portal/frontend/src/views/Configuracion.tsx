@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import Usuarios from './Usuarios'
 import CatalogoSimple from './CatalogoSimple'
+import TurnosConfig from './TurnosConfig'
 
-type Tab = 'usuarios' | 'proveedores' | 'puntos'
+type Tab = 'usuarios' | 'proveedores' | 'puntos' | 'turnos'
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'usuarios', label: 'Usuarios', icon: '👤' },
   { key: 'proveedores', label: 'Proveedores papel', icon: '📄' },
   { key: 'puntos', label: 'Puntos de medición', icon: '📍' },
+  { key: 'turnos', label: 'Turnos', icon: '🕐' },
 ]
 
 export default function Configuracion() {
@@ -30,6 +32,7 @@ export default function Configuracion() {
         {tab === 'usuarios' && <Usuarios />}
         {tab === 'proveedores' && <CatalogoSimple endpoint="/proveedores-papel" singular="proveedor" plural="Proveedores de papel" />}
         {tab === 'puntos' && <CatalogoSimple endpoint="/puntos-medicion" singular="punto de medición" plural="Puntos de medición" />}
+        {tab === 'turnos' && <TurnosConfig />}
       </div>
     </div>
   )

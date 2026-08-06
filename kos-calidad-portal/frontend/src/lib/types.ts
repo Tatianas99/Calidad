@@ -34,7 +34,8 @@ export type Filtracion = {
 export type F006Registro = {
   id: string
   orden_produccion?: string | null
-  referencia_id: number
+  referencia_id?: number | null
+  referencia_texto?: string | null
   marca?: string | null
   altura_vaso?: string | null
   diametro_superior?: string | null
@@ -61,6 +62,7 @@ export type F015Medicion = {
   ph: number
   cloro: number
   responsable_id?: number | null
+  responsable_nombre?: string | null
   ph_en_rango: boolean
   cloro_en_rango: boolean
   comentario?: string | null
@@ -101,9 +103,11 @@ export type F204Registro = {
   fecha: string
   fecha_hora: string
   turno: number
+  orden_produccion?: string | null
   maquina_id?: number | null
   maquina_texto?: string | null
-  referencia_id: number
+  referencia_id?: number | null
+  referencia_texto?: string | null
   marca?: string | null
   cantidad_clase_b?: number | null
   verificacion_desperdicio?: string | null

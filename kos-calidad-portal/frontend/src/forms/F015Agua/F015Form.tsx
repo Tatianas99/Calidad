@@ -3,9 +3,8 @@ import { apiGet, apiMutate } from '../../lib/api'
 import { uuid } from '../../lib/uuid'
 import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
-import SearchSelect from '../../components/SearchSelect'
 import ComboBox from '../../components/ComboBox'
-import type { Persona, PuntoMedicion, F015Medicion } from '../../lib/types'
+import type { PuntoMedicion, F015Medicion } from '../../lib/types'
 
 const PH_MIN = 6.5, PH_MAX = 8.5
 const CLORO_MIN = 0.3, CLORO_MAX = 2
@@ -19,17 +18,16 @@ export default function F015Form({
   onEditarConsumido?: () => void
 }) {
   const [puntos, setPuntos] = useState<PuntoMedicion[]>([])
-  const [personas, setPersonas] = useState<Persona[]>([])
   const [lista, setLista] = useState<F015Medicion[]>([])
   const [msg, setMsg] = useState('')
 
-  const admin = getUser()?.rol === 'admin'
+  const user = getUser()
+  const admin = user?.rol === 'admin'
   const [fechaManual, setFechaManual] = useState(hoy())
   const [editId, setEditId] = useState<string | null>(null)
   const [punto, setPunto] = useState('')
   const [ph, setPh] = useState('')
   const [cloro, setCloro] = useState('')
-  const [responsableId, setResponsableId] = useState('')
   const [comentario, setComentario] = useState('')
 
   const cargarLista = () =>
@@ -37,7 +35,6 @@ export default function F015Form({
 
   useEffect(() => {
     apiGet<PuntoMedicion[]>('/catalogos/puntos-medicion').then(setPuntos).catch(() => {})
-    apiGet<Persona[]>('/catalogos/personas').then(setPersonas).catch(() => {})
     cargarLista()
   }, [])
 
@@ -50,7 +47,6 @@ export default function F015Form({
         setPunto(m.punto_texto || nombrePunto(m.punto_medicion_id))
         setPh(String(m.ph))
         setCloro(String(m.cloro))
-        setResponsableId(m.responsable_id ? String(m.responsable_id) : '')
         setComentario(m.comentario ?? '')
       })
       .catch(() => {})
@@ -59,7 +55,7 @@ export default function F015Form({
   }, [editarId])
 
   const cancelarEdicion = () => {
-    setEditId(null); setPunto(''); setPh(''); setCloro(''); setResponsableId(''); setComentario('')
+    setEditId(null); setPunto(''); setPh(''); setCloro(''); setComentario('')
   }
 
   const flash = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(''), 2500) }
@@ -75,7 +71,6 @@ export default function F015Form({
       punto_texto: punto.trim(),
       ph: phNum,
       cloro: cloroNum,
-      responsable_id: responsableId ? Number(responsableId) : null,
       comentario: comentario || null,
     }
     if (editId) {
@@ -117,13 +112,8 @@ export default function F015Form({
           <Field label="Punto de medición" hint="buscar o escribir">
             <ComboBox value={punto} onChange={setPunto} options={puntos.map((p) => p.nombre)} placeholder="Buscar o escribir punto…" />
           </Field>
-          <Field label="Responsable" hint="busca por nombre">
-            <SearchSelect
-              items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
-              value={responsableId ? Number(responsableId) : undefined}
-              onChange={(id) => setResponsableId(String(id))}
-              placeholder="Buscar responsable…"
-            />
+          <Field label="Responsable" hint="automático · usuario en sesión">
+            <input type="text" value={user?.nombre ?? ''} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />
           </Field>
           <Field label="PH" hint="6.5 – 8.5">
             <input type="number" step="0.1" inputMode="decimal" value={ph}

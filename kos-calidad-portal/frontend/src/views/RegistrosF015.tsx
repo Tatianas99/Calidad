@@ -57,7 +57,7 @@ export default function RegistrosF015({ onEditar, onBack }: { onEditar?: (id: st
     },
     { key: 'estado', label: 'En rango', value: (r) => (r.ph_en_rango && r.cloro_en_rango ? 'sí ok' : 'no fuera') ,
       render: (r) => (r.ph_en_rango && r.cloro_en_rango) ? <span className="tag-ok">Sí</span> : <span className="tag-bad">No</span> },
-    { key: 'responsable', label: 'Responsable', value: (r) => personaName(r.responsable_id) },
+    { key: 'responsable', label: 'Responsable', value: (r) => r.responsable_nombre || personaName(r.responsable_id) },
     { key: 'comentario', label: 'Comentario', value: (r) => r.comentario ?? '' },
     ...(admin ? [{
       key: 'acciones', label: '', noFilter: true, value: () => '',

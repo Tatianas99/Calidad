@@ -6,6 +6,8 @@ import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
 import OptionButtons from '../../components/OptionButtons'
 import ReferenceSearch from '../../components/ReferenceSearch'
+import ComboBox from '../../components/ComboBox'
+import OPSearch, { type OP } from '../../components/OPSearch'
 import { matchKeywords } from '../../lib/fuzzy'
 import type {
   Referencia, F158Config, F158Proceso, F158Campo, F158Item, F158Recorrido, F158Adjunto,
@@ -20,7 +22,8 @@ type Entrada = {
   maquina?: string
   vals: Record<string, string>     // texto / cncna / opción elegida
   otros: Record<string, string>    // texto cuando la opción es "otro"
-  refIds: Record<string, number>   // referencia_id (campos tipo referencia)
+  refIds: Record<string, number>   // referencia_id (campos tipo referencia, legacy)
+  prodTextos: Record<string, string> // producto traído de la OP (campos tipo referencia)
   marcas: Record<string, string>   // marca (campos tipo referencia)
   observaciones?: string
   subidos: F158Adjunto[]           // adjuntos ya en el servidor (al editar)
@@ -75,7 +78,7 @@ async function procesarImagen(file: File): Promise<PendFile> {
 }
 
 function campoCompleto(c: F158Campo, e: Entrada): boolean {
-  if (c.tipo === 'referencia') return !!e.refIds[c.key] && !!(e.marcas[c.key] || '').trim()
+  if (c.tipo === 'referencia') return (!!e.refIds[c.key] || !!(e.prodTextos[c.key] || '').trim()) && !!(e.marcas[c.key] || '').trim()
   if (c.tipo === 'opciones') {
     const v = e.vals[c.key]
     if (!v) return false
@@ -96,8 +99,9 @@ function buildItem(c: F158Campo, e: Entrada, refs: Referencia[]): F158Item {
   const base = { campo_key: c.key, campo_label: c.label, tipo: c.tipo }
   if (c.tipo === 'referencia') {
     const r = refs.find((x) => x.id === e.refIds[c.key])
+    const producto = (e.prodTextos[c.key] || (r ? refLabelPlain(r) : '')).trim()
     const marca = e.marcas[c.key] ?? ''
-    const valor = ((r ? refLabelPlain(r) : '') + (marca ? ` ${marca}` : '')).trim()
+    const valor = (producto + (marca ? ` ${marca}` : '')).trim()
     return { ...base, valor: valor || null, ref_id: e.refIds[c.key] ?? null, marca: marca || null }
   }
   if (c.tipo === 'opciones') {
@@ -159,7 +163,7 @@ export default function F158Form({
 
   function agregar() {
     const nueva: Entrada = {
-      localId: uuid(), fecha: hoy(), vals: {}, otros: {}, refIds: {}, marcas: {}, subidos: [], createdAt: Date.now(),
+      localId: uuid(), fecha: hoy(), vals: {}, otros: {}, refIds: {}, prodTextos: {}, marcas: {}, subidos: [], createdAt: Date.now(),
     }
     setSt((s) => ({ ...s, entradas: [...s.entradas, nueva], seleccionadoId: nueva.localId }))
   }
@@ -180,11 +184,17 @@ export default function F158Form({
     const proc = procesoDe(r.proceso)
     const vals: Record<string, string> = {}, otros: Record<string, string> = {}
     const refIds: Record<string, number> = {}, marcas: Record<string, string> = {}
+    const prodTextos: Record<string, string> = {}
     for (const it of r.items) {
       const campo = proc?.campos.find((c) => c.key === it.campo_key)
       if (it.tipo === 'referencia') {
         if (it.ref_id) refIds[it.campo_key] = it.ref_id
         if (it.marca) marcas[it.campo_key] = it.marca
+        // Referencia guardada como texto (traída de la OP, sin FK): se recupera el producto.
+        if (!it.ref_id && it.valor) {
+          const m = it.marca ?? ''
+          prodTextos[it.campo_key] = m && it.valor.endsWith(` ${m}`) ? it.valor.slice(0, it.valor.length - m.length - 1) : it.valor
+        }
       } else if (it.tipo === 'opciones') {
         const v = it.valor ?? ''
         if (campo?.opciones?.includes(v)) vals[it.campo_key] = v
@@ -195,7 +205,7 @@ export default function F158Form({
     }
     const nueva: Entrada = {
       localId: uuid(), editId: r.id, fecha: r.fecha, proceso: r.proceso, maquina: r.maquina ?? undefined,
-      vals, otros, refIds, marcas, observaciones: r.observaciones ?? undefined,
+      vals, otros, refIds, prodTextos, marcas, observaciones: r.observaciones ?? undefined,
       subidos: r.adjuntos, createdAt: Date.now(),
     }
     setSt((s) => ({ ...s, entradas: [...s.entradas, nueva], seleccionadoId: nueva.localId }))
@@ -413,7 +423,19 @@ function EntradaDetalle({
   const setVal = (key: string, v: string) => upd({ vals: { ...entrada.vals, [key]: v } })
   const setOtro = (key: string, v: string) => upd({ otros: { ...entrada.otros, [key]: v } })
   const setRefId = (key: string, id: number) => upd({ refIds: { ...entrada.refIds, [key]: id } })
+  const setProdText = (key: string, v: string) => upd({ prodTextos: { ...entrada.prodTextos, [key]: v } })
   const setMarca = (key: string, v: string) => upd({ marcas: { ...entrada.marcas, [key]: v } })
+
+  // La OP (campo "op") autollena la Referencia y la Marca del recorrido.
+  const refKey = proceso.campos.find((c) => c.tipo === 'referencia')?.key
+  const onOpResolve = (o: OP) => {
+    const p: Partial<Entrada> = { vals: { ...entrada.vals, op: o.op } }
+    if (refKey) {
+      p.prodTextos = { ...entrada.prodTextos, [refKey]: o.referencia }
+      p.marcas = { ...entrada.marcas, [refKey]: o.marca }
+    }
+    upd(p)
+  }
 
   const faltan = faltantesDe(proceso, entrada)
 
@@ -434,11 +456,20 @@ function EntradaDetalle({
         {proceso.maquinas.length > 0 && (
           <div className="maq-box">
             <div className="maq-title">MÁQUINAS</div>
-            <OptionButtons
-              options={proceso.maquinas.map((m) => ({ value: m, label: m }))}
-              value={entrada.maquina}
-              onChange={(m) => upd({ maquina: m })}
-            />
+            {proceso.maquinas.length > 8 ? (
+              <ComboBox
+                value={entrada.maquina ?? ''}
+                onChange={(m) => upd({ maquina: m })}
+                options={proceso.maquinas}
+                placeholder="Buscar o escribir máquina…"
+              />
+            ) : (
+              <OptionButtons
+                options={proceso.maquinas.map((m) => ({ value: m, label: m }))}
+                value={entrada.maquina}
+                onChange={(m) => upd({ maquina: m })}
+              />
+            )}
           </div>
         )}
 
@@ -453,11 +484,14 @@ function EntradaDetalle({
             vals={entrada.vals}
             otros={entrada.otros}
             refId={entrada.refIds[c.key]}
+            prodTexto={entrada.prodTextos[c.key] ?? ''}
             marca={entrada.marcas[c.key] ?? ''}
             onVal={(v) => setVal(c.key, v)}
             onOtro={(v) => setOtro(c.key, v)}
             onRefId={(id) => setRefId(c.key, id)}
+            onProdText={(v) => setProdText(c.key, v)}
             onMarca={(v) => setMarca(c.key, v)}
+            onOpResolve={onOpResolve}
           />
         ))}
 
@@ -466,9 +500,19 @@ function EntradaDetalle({
           <textarea value={entrada.observaciones ?? ''} onChange={(ev) => upd({ observaciones: ev.target.value })} />
         </Field>
 
-        <Field label="Registro fotográfico o video" hint="opcional · foto/video">
-          <input type="file" accept="image/*,video/*" multiple capture="environment"
-            onChange={(ev) => { onAddFiles(ev.target.files); ev.target.value = '' }} />
+        <Field label="Registro fotográfico o video" hint="opcional">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+              📷 Tomar foto
+              <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                onChange={(ev) => { onAddFiles(ev.target.files); ev.target.value = '' }} />
+            </label>
+            <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+              📁 Subir archivo
+              <input type="file" accept="image/*,video/*" multiple style={{ display: 'none' }}
+                onChange={(ev) => { onAddFiles(ev.target.files); ev.target.value = '' }} />
+            </label>
+          </div>
         </Field>
         {(pend.length > 0 || entrada.subidos.length > 0) && (
           <div className="adj-grid">
@@ -504,7 +548,7 @@ function EntradaDetalle({
 }
 
 function CampoField({
-  campo, config, refs, vals, otros, refId, marca, onVal, onOtro, onRefId, onMarca,
+  campo, config, refs, vals, otros, refId, prodTexto, marca, onVal, onOtro, onRefId, onProdText, onMarca, onOpResolve,
 }: {
   campo: F158Campo
   config: F158Config
@@ -512,25 +556,39 @@ function CampoField({
   vals: Record<string, string>
   otros: Record<string, string>
   refId?: number
+  prodTexto: string
   marca: string
   onVal: (v: string) => void
   onOtro: (v: string) => void
   onRefId: (id: number) => void
+  onProdText: (v: string) => void
   onMarca: (v: string) => void
+  onOpResolve: (o: OP) => void
 }) {
   if (campo.tipo === 'referencia') {
+    // Si la OP ya trajo el producto, se muestra como texto (no hay que buscar).
+    const auto = !!prodTexto.trim()
     return (
       <div className="row" style={{ marginBottom: 8 }}>
-        <Field label={campo.label} hint="busca por palabras clave">
-          <ReferenceSearch referencias={refs} value={refId} onChange={onRefId} />
+        <Field label={campo.label} hint={auto ? 'traído de la OP' : 'busca por palabras clave'}>
+          {auto
+            ? <input value={prodTexto} onChange={(e) => onProdText(e.target.value)} placeholder="Se autollena al elegir la OP" />
+            : <ReferenceSearch referencias={refs} value={refId} onChange={onRefId} />}
         </Field>
-        <Field label="Marca" hint="texto libre">
+        <Field label="Marca" hint={auto ? 'traído de la OP' : 'texto libre'}>
           <input value={marca} onChange={(e) => onMarca(e.target.value)} />
         </Field>
       </div>
     )
   }
   if (campo.tipo === 'texto') {
+    if (campo.key === 'op') {
+      return (
+        <Field label={campo.label} hint="trae referencia y marca">
+          <OPSearch value={vals[campo.key] ?? ''} onChange={onVal} onResolve={onOpResolve} />
+        </Field>
+      )
+    }
     return (
       <Field label={campo.label} hint="escribir">
         <input value={vals[campo.key] ?? ''} onChange={(e) => onVal(e.target.value)} />

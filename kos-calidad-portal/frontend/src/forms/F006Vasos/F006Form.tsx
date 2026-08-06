@@ -6,8 +6,8 @@ import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
 import ChecklistCNCNA from '../../components/ChecklistCNCNA'
 import OptionButtons from '../../components/OptionButtons'
-import ReferenceSearch from '../../components/ReferenceSearch'
 import ComboBox from '../../components/ComboBox'
+import OPSearch from '../../components/OPSearch'
 import SearchSelect from '../../components/SearchSelect'
 import type { Referencia, Maquina, Persona, Opciones, Option, F006Registro } from '../../lib/types'
 
@@ -28,7 +28,7 @@ type LocalFiltracion = {
 type Producto = {
   registroId: string
   orden_produccion?: string
-  referencia_id?: number
+  referencia_texto?: string  // referencia traída de la OP
   marca?: string
   altura_vaso?: string
   diametro_superior?: string
@@ -92,7 +92,7 @@ export default function F006Form({
           const prod: Producto = {
             registroId: r.id,
             orden_produccion: r.orden_produccion ?? undefined,
-            referencia_id: r.referencia_id,
+            referencia_texto: r.referencia_texto ?? (r.referencia_id ? refLabel(r.referencia_id) : undefined),
             marca: r.marca ?? undefined,
             altura_vaso: r.altura_vaso ?? undefined,
             diametro_superior: r.diametro_superior ?? undefined,
@@ -134,13 +134,14 @@ export default function F006Form({
   const flash = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(''), 2500) }
   const feedback = (queued: boolean) => flash(queued ? 'Guardado (pendiente de sincronizar)' : 'Guardado')
 
+  // Resuelve una referencia_id vieja a texto (solo respaldo al editar registros previos).
   const refLabel = (id?: number) => {
     const r = refs.find((x) => x.id === id)
-    return r ? (r.descripcion ? `${r.codigo} · ${r.descripcion}` : r.codigo) : 'Producto nuevo'
+    return r ? (r.descripcion ? `${r.codigo} · ${r.descripcion}` : r.codigo) : ''
   }
-  // Etiqueta del producto: referencia + marca (usar en todas las secciones).
-  const prodLabel = (p: { referencia_id?: number; marca?: string }) =>
-    refLabel(p.referencia_id) + (p.marca ? ` ${p.marca}` : '')
+  // Etiqueta del producto: referencia (de la OP) + marca (usar en todas las secciones).
+  const prodLabel = (p: { referencia_texto?: string; marca?: string }) =>
+    (p.referencia_texto || 'Producto nuevo') + (p.marca ? ` ${p.marca}` : '')
 
   const mapProd = (id: string, fn: (p: Producto) => Producto) =>
     setSt((s) => ({ ...s, productos: s.productos.map((p) => (p.registroId === id ? fn(p) : p)) }))
@@ -165,10 +166,10 @@ export default function F006Form({
   }
 
   async function maybeGuardarCabecera(prod: Producto) {
-    if (!prod.referencia_id || !prod.maquina || !prod.turno) return
+    if (!prod.referencia_texto || !prod.referencia_texto.trim() || !prod.maquina || !prod.turno) return
     const body = {
       orden_produccion: prod.orden_produccion ?? null,
-      referencia_id: prod.referencia_id, marca: prod.marca ?? null, fecha: prod.fecha,
+      referencia_texto: prod.referencia_texto ?? null, marca: prod.marca ?? null, fecha: prod.fecha,
       maquina_texto: prod.maquina ?? null, turno: prod.turno,
       altura_vaso: prod.altura_vaso ?? null, diametro_superior: prod.diametro_superior ?? null,
       diametro_inferior: prod.diametro_inferior ?? null, grueso_rim: prod.grueso_rim ?? null,
@@ -303,12 +304,10 @@ export default function F006Form({
             <ProductoDetalle
               key={selected.registroId}
               prod={selected}
-              refs={refs}
               maqs={maqs}
               personas={personas}
               opts={opts}
               now={now}
-              refLabel={refLabel}
               onCabecera={(patch) => cambiarCabecera(selected, patch)}
               onPatch={(patch) => patchProd(selected.registroId, patch)}
               onEmbalaje={(item, r) => cambiarEmbalaje(selected.registroId, item, r)}
@@ -327,15 +326,13 @@ export default function F006Form({
 }
 
 function ProductoDetalle({
-  prod, refs, maqs, personas, opts, now, refLabel, onCabecera, onPatch, onEmbalaje, onMontar, onResultado, onFirmas, onFinalizar,
+  prod, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onResultado, onFirmas, onFinalizar,
 }: {
   prod: Producto
-  refs: Referencia[]
   maqs: Maquina[]
   personas: Persona[]
   opts: Opciones | null
   now: number
-  refLabel: (id?: number) => string
   onCabecera: (patch: Partial<Producto>) => void
   onPatch: (patch: Partial<Producto>) => void
   onEmbalaje: (item: string, resultado: string) => void
@@ -346,8 +343,7 @@ function ProductoDetalle({
 }) {
   const [tab, setTab] = useState<Tab>('pe')
   const admin = getUser()?.rol === 'admin'
-  const porRol = (rol: string) => personas.filter((p) => p.rol === rol)
-  const cabeceraCompleta = !!(prod.referencia_id && prod.maquina && prod.turno)
+  const cabeceraCompleta = !!(prod.referencia_texto && prod.referencia_texto.trim() && prod.maquina && prod.turno)
   const faltantesEmb = opts ? opts.embalaje_f006.filter((o) => !prod.embalaje[o.value]) : []
 
   const firmasFaltan: string[] = []
@@ -357,7 +353,7 @@ function ProductoDetalle({
 
   return (
     <div>
-      <h3 className="prod-title">{refLabel(prod.referencia_id)}{prod.marca ? ` ${prod.marca}` : ''}</h3>
+      <h3 className="prod-title">{prod.referencia_texto || 'Producto nuevo'}{prod.marca ? ` ${prod.marca}` : ''}</h3>
 
       <div className="tabbar">
         <button className={'tab' + (tab === 'pe' ? ' active' : '')} onClick={() => setTab('pe')}>
@@ -374,15 +370,19 @@ function ProductoDetalle({
       {tab === 'pe' && (
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Producto</h3>
-          <Field label="Orden de producción" hint="escribir (va primero)">
-            <input value={prod.orden_produccion ?? ''} onChange={(e) => onPatch({ orden_produccion: e.target.value })} onBlur={() => onCabecera({})} />
+          <Field label="Orden de producción" hint="trae referencia y marca (va primero)">
+            <OPSearch
+              value={prod.orden_produccion ?? ''}
+              onChange={(v) => onPatch({ orden_produccion: v })}
+              onResolve={(o) => onCabecera({ referencia_texto: o.referencia, marca: o.marca })}
+            />
           </Field>
           <div className="row">
-            <Field label="Referencia" hint="busca por palabras clave">
-              <ReferenceSearch referencias={refs} value={prod.referencia_id} onChange={(id) => onCabecera({ referencia_id: id })} />
+            <Field label="Referencia" hint="se llena con la OP">
+              <input value={prod.referencia_texto ?? ''} onChange={(e) => onPatch({ referencia_texto: e.target.value })} onBlur={() => onCabecera({})} placeholder="Se autollena al elegir la OP" />
             </Field>
-            <Field label="Marca" hint="texto libre">
-              <input value={prod.marca ?? ''} onChange={(e) => onPatch({ marca: e.target.value })} onBlur={() => onCabecera({})} />
+            <Field label="Marca" hint="se llena con la OP">
+              <input value={prod.marca ?? ''} onChange={(e) => onPatch({ marca: e.target.value })} onBlur={() => onCabecera({})} placeholder="Se autollena al elegir la OP" />
             </Field>
           </div>
           <div className="row">
@@ -440,7 +440,7 @@ function ProductoDetalle({
           {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} />}
           {prod.filtraciones.length === 0 && cabeceraCompleta && <p className="muted">Aún no hay pruebas montadas.</p>}
           {prod.filtraciones.map((f) => (
-            <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={refLabel(prod.referencia_id) + (prod.marca ? ` ${prod.marca}` : '')} onResultado={onResultado} />
+            <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={(prod.referencia_texto || '') + (prod.marca ? ` ${prod.marca}` : '')} onResultado={onResultado} />
           ))}
           <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" onClick={() => setTab('firmas')}>Siguiente →</button>
@@ -456,17 +456,17 @@ function ProductoDetalle({
             <Field label="Auxiliar de calidad" hint="automático · persona en turno">
               <input type="text" value={getUser()?.nombre ?? ''} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />
             </Field>
-            <Field label="Operario(a)" hint="busca por nombre">
+            <Field label="Operario(a)" hint="busca por nombre (todos los empleados)">
               <SearchSelect
-                items={porRol('operario').map((p) => ({ id: p.id, label: p.nombre }))}
+                items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
                 value={prod.operario_id}
                 onChange={(id) => onFirmas({ operario_id: id })}
                 placeholder="Buscar operario…"
               />
             </Field>
-            <Field label="Empacador(a)" hint="busca por nombre">
+            <Field label="Empacador(a)" hint="busca por nombre (todos los empleados)">
               <SearchSelect
-                items={porRol('empacador').map((p) => ({ id: p.id, label: p.nombre }))}
+                items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
                 value={prod.empacador_id}
                 onChange={(id) => onFirmas({ empacador_id: id })}
                 placeholder="Buscar empacador…"

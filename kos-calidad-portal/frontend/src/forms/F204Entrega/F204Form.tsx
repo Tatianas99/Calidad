@@ -5,9 +5,9 @@ import { uuid } from '../../lib/uuid'
 import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
 import OptionButtons from '../../components/OptionButtons'
-import ReferenceSearch from '../../components/ReferenceSearch'
 import SearchSelect from '../../components/SearchSelect'
 import ComboBox from '../../components/ComboBox'
+import OPSearch from '../../components/OPSearch'
 import type { Referencia, Maquina, Persona, F204Registro } from '../../lib/types'
 
 const RESULTADOS = ['C', 'NC', 'NA']
@@ -18,8 +18,9 @@ type Entrada = {
   editId?: string
   fecha?: string          // solo admin puede editarla
   turno?: number
+  orden_produccion?: string
   maquina?: string        // máquina (buscar/escribir)
-  referencia_id?: number
+  referencia_texto?: string  // referencia traída de la OP
   marca?: string
   cantidad_clase_b?: string
   verificacion?: string
@@ -60,8 +61,10 @@ export default function F204Form({
           if (s.entradas.some((e) => e.editId === r.id)) return { ...s, seleccionadoId: s.entradas.find((e) => e.editId === r.id)!.localId }
           const nueva: Entrada = {
             localId: uuid(), editId: r.id, fecha: r.fecha, turno: r.turno,
+            orden_produccion: r.orden_produccion ?? undefined,
             maquina: r.maquina_texto ?? (r.maquina_id ? maqs.find((m) => m.id === r.maquina_id)?.nombre : undefined),
-            referencia_id: r.referencia_id, marca: r.marca ?? undefined,
+            referencia_texto: r.referencia_texto ?? (r.referencia_id ? refLabel(r.referencia_id) : undefined),
+            marca: r.marca ?? undefined,
             cantidad_clase_b: r.cantidad_clase_b != null ? String(r.cantidad_clase_b) : undefined,
             verificacion: r.verificacion_desperdicio ?? undefined,
             entregado_por_id: r.entregado_por_id ?? undefined,
@@ -102,7 +105,7 @@ export default function F204Form({
     const f: string[] = []
     if (!e.turno) f.push('Turno')
     if (!e.maquina || !e.maquina.trim()) f.push('Máquina')
-    if (!e.referencia_id) f.push('Referencia')
+    if (!e.referencia_texto || !e.referencia_texto.trim()) f.push('Referencia')
     if (!e.entregado_por_id) f.push('Entregado por')
     return f
   }
@@ -110,8 +113,8 @@ export default function F204Form({
   async function finalizar(e: Entrada) {
     if (faltan(e).length) { flash(`Faltan campos: ${faltan(e).join(', ')}`); return }
     const body = {
-      turno: e.turno, maquina_texto: e.maquina ?? null, referencia_id: e.referencia_id,
-      marca: e.marca ?? null,
+      turno: e.turno, orden_produccion: e.orden_produccion ?? null, maquina_texto: e.maquina ?? null,
+      referencia_texto: e.referencia_texto ?? null, marca: e.marca ?? null,
       cantidad_clase_b: e.cantidad_clase_b != null && e.cantidad_clase_b !== '' ? Number(e.cantidad_clase_b) : null,
       verificacion_desperdicio: e.verificacion ?? null,
       entregado_por_id: e.entregado_por_id ?? null,
@@ -154,7 +157,7 @@ export default function F204Form({
                 className={'prod-item' + (e.localId === st.seleccionadoId ? ' sel' : '')}
                 onClick={() => setSt((s) => ({ ...s, seleccionadoId: e.localId }))}
               >
-                <span className="pt">{e.referencia_id ? refLabel(e.referencia_id) + (e.marca ? ` ${e.marca}` : '') : 'Nueva entrega'}</span>
+                <span className="pt">{e.referencia_texto ? e.referencia_texto + (e.marca ? ` ${e.marca}` : '') : 'Nueva entrega'}</span>
                 <span className="pm">{resumen(e)}{e.editId ? ' · editando' : ' · sin guardar'}</span>
                 <span className="quitar-x" title="Quitar" onClick={(ev) => { ev.stopPropagation(); quitar(e.localId) }}>×</span>
               </button>
@@ -170,7 +173,7 @@ export default function F204Form({
             </div>
           ) : (
             <div className="panel">
-              <h3 style={{ marginTop: 0 }}>{selected.referencia_id ? refLabel(selected.referencia_id) + (selected.marca ? ` ${selected.marca}` : '') : 'Nueva entrega'}</h3>
+              <h3 style={{ marginTop: 0 }}>{selected.referencia_texto ? selected.referencia_texto + (selected.marca ? ` ${selected.marca}` : '') : 'Nueva entrega'}</h3>
               <div className="row">
                 {admin && (
                   <Field label="Fecha" hint="editable (solo admin)">
@@ -186,14 +189,21 @@ export default function F204Form({
                 <Field label="Máquina" hint="buscar o escribir">
                   <ComboBox value={selected.maquina ?? ''} onChange={(v) => upd({ maquina: v })} options={maqs.map((m) => m.nombre)} placeholder="Buscar o escribir máquina…" />
                 </Field>
+                <Field label="Orden de producción" hint="trae referencia y marca">
+                  <OPSearch
+                    value={selected.orden_produccion ?? ''}
+                    onChange={(v) => upd({ orden_produccion: v })}
+                    onResolve={(o) => upd({ referencia_texto: o.referencia, marca: o.marca })}
+                  />
+                </Field>
               </div>
 
               <div className="row">
-                <Field label="Referencia" hint="busca por palabras clave">
-                  <ReferenceSearch referencias={refs} value={selected.referencia_id} onChange={(id) => upd({ referencia_id: id })} />
+                <Field label="Referencia" hint="se llena con la OP">
+                  <input value={selected.referencia_texto ?? ''} onChange={(e) => upd({ referencia_texto: e.target.value })} placeholder="Se autollena al elegir la OP" />
                 </Field>
-                <Field label="Marca" hint="texto libre">
-                  <input value={selected.marca ?? ''} onChange={(e) => upd({ marca: e.target.value })} />
+                <Field label="Marca" hint="se llena con la OP">
+                  <input value={selected.marca ?? ''} onChange={(e) => upd({ marca: e.target.value })} placeholder="Se autollena al elegir la OP" />
                 </Field>
               </div>
 

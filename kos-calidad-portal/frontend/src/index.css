@@ -280,6 +280,16 @@ textarea { min-height: 70px; resize: vertical; }
   background: var(--surface); border-right: 1px solid var(--border);
   padding: 14px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 70vh;
 }
+/* Cabecera de marca arriba del menú */
+.nav-brand {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: none; border: none; cursor: pointer; font: inherit; color: inherit;
+  padding: 4px 6px 14px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.nav-logo { width: 42px; height: 42px; object-fit: contain; border-radius: 11px; background: #fff; padding: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.12); flex-shrink: 0; }
+.nav-brand-txt { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.nav-brand-title { font-weight: 800; font-size: .95rem; letter-spacing: .01em; }
+.nav-brand-sub { font-size: .72rem; font-weight: 700; letter-spacing: .09em; color: var(--brand); }
 @media (max-width: 820px) {
   /* En móvil el menú va vertical (una opción por línea), a todo el ancho, y como
      está contraído por defecto no ocupa espacio hasta que se abre con ☰. */
@@ -329,6 +339,11 @@ textarea { min-height: 70px; resize: vertical; }
 .detalle-filt { padding: 4px 0; border-bottom: 1px dashed var(--border); font-size: .88rem; }
 .emb-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .emb-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 3px 8px; font-size: .82rem; }
+/* Píldoras de color para C / NC / N-A en los checklists de registros. */
+.res-pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-weight: 800; font-size: .76rem; }
+.res-pill.r-c { background: var(--ok-bg); color: var(--ok); }
+.res-pill.r-nc { background: var(--bad-bg); color: var(--bad); }
+.res-pill.r-na { background: var(--surface-2); color: var(--muted); }
 
 /* ---- Usuarios ---- */
 .user-row { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
@@ -339,6 +354,101 @@ textarea { min-height: 70px; resize: vertical; }
 .user-actions .btn { min-height: 40px; padding: 8px 12px; }
 .perm-list { display: flex; flex-wrap: wrap; gap: 10px; }
 .perm { display: flex; align-items: center; gap: 6px; font-size: .88rem; background: var(--surface-2); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+
+/* ---- Dashboard ---- */
+.seg { border: 1px solid var(--border); background: var(--surface-2); color: inherit; font: inherit; font-size: .95rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+.seg:disabled { opacity: .4; cursor: default; }
+.dash-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; }
+.mes-nav { display: flex; align-items: center; gap: 8px; }
+.mes-lbl { font-weight: 700; text-transform: capitalize; min-width: 120px; text-align: center; }
+.fecha-in { font-size: .82rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.fecha-in input { width: auto; padding: 7px 8px; }
+.dash-buscar { flex: 1; min-width: 200px; max-width: 340px; margin-left: auto; padding: 8px 12px; }
+.dash-block { margin-bottom: 22px; padding: 20px 20px 22px; }
+.dash-block > h3 { margin: 0 0 16px; font-size: 1.05rem; }
+.dash-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.dash-2col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+/* Cada gráfica en su propia tarjeta, bien separada, para que no se vea revuelto. */
+.dash-2col > div, .dash-3col > div {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px 16px; min-width: 0; display: flex; flex-direction: column;
+}
+.dash-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 6px; }
+@media (max-width: 820px) { .dash-3col, .dash-2col { grid-template-columns: 1fr; } }
+.dash-sub { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+.stat-tile { border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; background: var(--surface-2); min-width: 150px; }
+.stat-num { font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+.stat-num.bad { color: var(--bad); }
+.stat-num.ok { color: #16a34a; }
+.stat-lbl { font-size: .85rem; font-weight: 600; }
+
+/* Barras horizontales */
+.barlist { display: flex; flex-direction: column; gap: 10px; }
+.barrow { display: grid; grid-template-columns: 42% 1fr auto; align-items: center; gap: 10px; }
+.barlabel { font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bartrack { height: 14px; background: var(--surface-2); border-radius: 7px; overflow: hidden; }
+.barfill { height: 100%; border-radius: 7px; min-width: 0; }
+.barval { font-size: .82rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Tendencia (SVG) */
+.trend { width: 100%; height: auto; display: block; }
+.trend-band { fill: rgba(22, 163, 74, .12); }
+.trend-limit { stroke: #16a34a; stroke-width: 1; stroke-dasharray: 4 3; opacity: .6; }
+.trend-line { stroke: #3b82f6; stroke-width: 2; }
+.trend-dot { fill: #3b82f6; }
+.trend-dot.bad { fill: #ef4444; }
+.trend-tick { fill: var(--muted); font-size: 11px; }
+
+/* Paleta de series validada (light por defecto; dark en media + toggle) */
+:root { --ch-1:#2a78d6; --ch-2:#eb6834; --ch-3:#1baf7a; --ch-4:#eda100; --ch-5:#e87ba4; --ch-6:#008300; --ch-other:#b7b5ad; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ch-1:#3987e5; --ch-2:#d95926; --ch-3:#199e70; --ch-4:#c98500; --ch-5:#d55181; --ch-6:#3ba33b; --ch-other:#6b6a64; } }
+:root[data-theme="light"] { --ch-1:#2a78d6; --ch-2:#eb6834; --ch-3:#1baf7a; --ch-4:#eda100; --ch-5:#e87ba4; --ch-6:#008300; --ch-other:#b7b5ad; }
+:root[data-theme="dark"] { --ch-1:#3987e5; --ch-2:#d95926; --ch-3:#199e70; --ch-4:#c98500; --ch-5:#d55181; --ch-6:#3ba33b; --ch-other:#6b6a64; }
+
+/* Columnas verticales */
+.vbars { display: flex; align-items: flex-end; gap: 14px; height: 160px; padding: 4px 2px; }
+.vcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.vval { font-size: .82rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+.vtrack { flex: 1; width: 100%; max-width: 64px; display: flex; align-items: flex-end; }
+.vfill { width: 100%; border-radius: 5px 5px 0 0; min-height: 0; }
+.vlabel { font-size: .78rem; margin-top: 6px; color: var(--muted); }
+
+/* Línea genérica */
+.lm-grid { stroke: var(--border); stroke-width: 1; }
+.lm-axis { stroke: var(--border); stroke-width: 1.5; }
+
+/* Pareto */
+.par-ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; opacity: .7; }
+.par-bar { fill: var(--ch-1); }
+.par-line { stroke: var(--ch-2); stroke-width: 2; }
+.par-dot { fill: var(--ch-2); }
+.par-val { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.par-lbl { fill: var(--text); font-size: 11px; }
+
+/* Composición (barra 100% apilada) */
+.comp-bar { display: flex; height: 26px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+.comp-seg { height: 100%; box-shadow: inset -1px 0 0 var(--surface); }
+.comp-leg { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; font-size: .82rem; }
+.comp-item { display: inline-flex; align-items: center; gap: 5px; }
+.comp-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+/* Matriz proceso × turno */
+.matriz { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.matriz th, .matriz td { border: 1px solid var(--border); padding: 6px 8px; text-align: center; }
+.matriz th { background: var(--surface-2); font-weight: 700; }
+.matriz .mproc { text-align: left; font-weight: 600; }
+.matriz .mcell { font-variant-numeric: tabular-nums; }
+.matriz .mtot { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---- Configuración: grilla de turnos ---- */
+.turnos-tab { width: 100%; border-collapse: collapse; }
+.turnos-tab th, .turnos-tab td { border: 1px solid var(--border); padding: 8px 10px; text-align: center; }
+.turnos-tab th { background: var(--surface-2); font-weight: 700; }
+.turnos-tab .tdia { text-align: left; font-weight: 600; white-space: nowrap; }
+.turno-cell { display: flex; align-items: center; gap: 6px; justify-content: center; }
+.turno-cell input[type="time"] { width: auto; min-width: 96px; padding: 6px 8px; }
 
 /* ---- Configuración (pestañas tipo chip) ---- */
 .cfg-tabs { display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }

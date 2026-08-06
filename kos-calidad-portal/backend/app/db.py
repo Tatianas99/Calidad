@@ -88,12 +88,23 @@ def init_db():
         ("orden_produccion", "VARCHAR(40)", "NVARCHAR(40) NULL"),
         ("maquina_texto", "VARCHAR(80)", "NVARCHAR(80) NULL"),
         ("auxiliar_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
+        ("referencia_texto", "VARCHAR(200)", "NVARCHAR(200) NULL"),
     ])
-    _ensure_columns("f204_registro", [("maquina_texto", "VARCHAR(80)", "NVARCHAR(80) NULL")])
-    _ensure_columns("f015_medicion", [("punto_texto", "VARCHAR(120)", "NVARCHAR(120) NULL")])
+    _ensure_columns("f204_registro", [
+        ("maquina_texto", "VARCHAR(80)", "NVARCHAR(80) NULL"),
+        ("orden_produccion", "VARCHAR(40)", "NVARCHAR(40) NULL"),
+        ("referencia_texto", "VARCHAR(200)", "NVARCHAR(200) NULL"),
+    ])
+    _ensure_columns("f015_medicion", [
+        ("punto_texto", "VARCHAR(120)", "NVARCHAR(120) NULL"),
+        ("responsable_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
+    ])
     _make_nullable("f006_registro", "maquina_id", "INT")
     _make_nullable("f204_registro", "maquina_id", "INT")
     _make_nullable("f015_medicion", "punto_medicion_id", "INT")
+    # La referencia ahora se trae de la OP como texto; la FK vieja queda anulable.
+    _make_nullable("f006_registro", "referencia_id", "INT")
+    _make_nullable("f204_registro", "referencia_id", "INT")
 
 
 def _ensure_columns(tabla: str, columnas: list[tuple[str, str, str]]):

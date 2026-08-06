@@ -14,9 +14,10 @@ import RegistrosF158 from './views/RegistrosF158'
 import RegistrosF204 from './views/RegistrosF204'
 import RegistrosF005 from './views/RegistrosF005'
 import Configuracion from './views/Configuracion'
+import Dashboard from './views/Dashboard'
 import { CupsIcon, WaterTestIcon, BadgeIcon, TrashIcon, RollIcon } from './components/FormIcons'
 
-type View = 'home' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config'
+type View = 'home' | 'dashboard' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config'
 
 export default function App() {
   const [user, setUser] = useState<Usuario | null>(getUser())
@@ -44,7 +45,16 @@ export default function App() {
 
   const nav = (
     <nav className="mainnav">
+      <button className="nav-brand" onClick={() => irA('home')} title="Ir al inicio">
+        <img src="/logo-kos.png" alt="KOS Colombia" className="nav-logo" />
+        <span className="nav-brand-txt">
+          <span className="nav-brand-title">PORTAL CALIDAD</span>
+          <span className="nav-brand-sub">KOS COLOMBIA</span>
+        </span>
+      </button>
+
       <NavItem label="Inicio" active={view === 'home'} onClick={() => irA('home')} />
+      {hasPermiso('ver_registros') && <NavItem label="📊 Dashboard" active={view === 'dashboard'} onClick={() => irA('dashboard')} />}
 
       {(hasPermiso('registrar_f005') || hasPermiso('registrar_f006') || hasPermiso('registrar_f015') || hasPermiso('registrar_f158') || hasPermiso('registrar_f204')) && <div className="nav-sec">Registrar</div>}
       {hasPermiso('registrar_f005') && <NavItem label="F-005 Liberación de rollos" active={view === 'f005'} onClick={() => irA('f005')} />}
@@ -77,6 +87,7 @@ export default function App() {
         {navOpen && nav}
         <main className="dash-main">
           {view === 'home' && <Home onOpen={setView} />}
+          {view === 'dashboard' && <Dashboard />}
           {view === 'reportes' && <Reportes onOpen={setView} />}
           {view === 'f005' && <F005Form onExit={() => setView('home')} editarId={f005Edit} onEditarConsumido={() => setF005Edit(null)} />}
           {view === 'f006' && <F006Form onExit={() => setView('home')} editarId={f006Edit} onEditarConsumido={() => setF006Edit(null)} />}

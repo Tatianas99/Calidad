@@ -17,7 +17,7 @@ from .personal import sync_personas
 from .referencias_sync import sync_referencias
 from .maquinas_sync import sync_maquinas
 from .seed import seed_admin
-from .routers import catalogos, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios, proveedores, puntos
+from .routers import catalogos, catalogo_op, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios, proveedores, puntos, dashboard, turnos
 
 log = logging.getLogger("uvicorn.error")
 
@@ -83,15 +83,18 @@ app.include_router(auth_router.router)
 # Endpoints protegidos: requieren token de sesión válido.
 _auth = [Depends(get_current_user)]
 app.include_router(catalogos.router, dependencies=_auth)
+app.include_router(catalogo_op.router, dependencies=_auth)
 app.include_router(f005.router, dependencies=_auth)
 app.include_router(f006.router, dependencies=_auth)
 app.include_router(f015.router, dependencies=_auth)
 app.include_router(f158.router, dependencies=_auth)
 app.include_router(f204.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
+app.include_router(dashboard.router, dependencies=_auth)
 app.include_router(usuarios.router)  # ya exige permiso gestionar_usuarios internamente
 app.include_router(proveedores.router)  # idem (configuración, solo admin)
 app.include_router(puntos.router)  # idem
+app.include_router(turnos.router)  # idem (horarios de turnos)
 
 # Build del frontend (frontend/dist copiado aquí en el pipeline de despliegue).
 # Se monta al final para que las rutas de la API definidas arriba tengan prioridad.

@@ -35,6 +35,7 @@ def crear_registro(
     kwargs = dict(
         orden_produccion=data.orden_produccion,
         referencia_id=data.referencia_id,
+        referencia_texto=data.referencia_texto,
         marca=data.marca,
         altura_vaso=data.altura_vaso,
         diametro_superior=data.diametro_superior,
@@ -84,6 +85,7 @@ def actualizar_cabecera(
     reg = _get_registro(registro_id, db)
     reg.orden_produccion = data.orden_produccion
     reg.referencia_id = data.referencia_id
+    reg.referencia_texto = data.referencia_texto
     reg.marca = data.marca
     reg.maquina_texto = data.maquina_texto
     reg.altura_vaso = data.altura_vaso

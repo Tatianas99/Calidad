@@ -44,9 +44,12 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
     }
   }
 
-  const refName = (id: number) => {
-    const r = refs.find((x) => x.id === id)
-    return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : `#${id}`
+  // La referencia ahora viene de la OP como texto; la FK vieja es respaldo.
+  const refName = (reg: F006Registro) => {
+    if (reg.referencia_texto) return reg.referencia_texto
+    if (!reg.referencia_id) return ''
+    const r = refs.find((x) => x.id === reg.referencia_id)
+    return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : ''
   }
   const maqName = (id?: number | null) => (id ? maqs.find((m) => m.id === id)?.nombre ?? `#${id}` : '')
   const personaName = (id?: number | null) => (id ? personas.find((p) => p.id === id)?.nombre ?? `#${id}` : '—')
@@ -59,7 +62,7 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
     { key: 'turno', label: 'Turno', value: (r) => `T${r.turno}` },
     { key: 'op', label: 'OP', value: (r) => r.orden_produccion ?? '' },
     { key: 'maquina', label: 'Máquina', value: (r) => r.maquina_texto || maqName(r.maquina_id) },
-    { key: 'referencia', label: 'Referencia', value: (r) => refName(r.referencia_id) },
+    { key: 'referencia', label: 'Referencia', value: (r) => refName(r) },
     { key: 'marca', label: 'Marca', value: (r) => r.marca ?? '' },
     { key: 'auxiliar', label: 'Auxiliar', value: (r) => r.auxiliar_nombre || personaName(r.auxiliar_id) },
     { key: 'muestra', label: 'Muestra', value: (r) => String(sum(r, 'cantidad_muestra')) },

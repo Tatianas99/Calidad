@@ -52,7 +52,8 @@ class Mediciones(BaseModel):
 class F006RegistroCreate(Mediciones):
     id: Optional[str] = None  # UUID generado en el cliente (idempotencia)
     orden_produccion: Optional[str] = None
-    referencia_id: int
+    referencia_id: Optional[int] = None  # legacy
+    referencia_texto: Optional[str] = None  # referencia traída de la OP
     marca: Optional[str] = None
     fecha: Optional[date] = None  # solo admin puede fijar fecha manual
     maquina_id: Optional[int] = None
@@ -63,7 +64,8 @@ class F006RegistroCreate(Mediciones):
 class F006CabeceraUpdate(Mediciones):
     """Editar la cabecera de un producto ya creado."""
     orden_produccion: Optional[str] = None
-    referencia_id: int
+    referencia_id: Optional[int] = None  # legacy
+    referencia_texto: Optional[str] = None  # referencia traída de la OP
     marca: Optional[str] = None
     fecha: Optional[date] = None
     maquina_id: Optional[int] = None
@@ -150,7 +152,8 @@ class FiltracionOut(BaseModel):
 class F006RegistroOut(Mediciones):
     id: str
     orden_produccion: Optional[str] = None
-    referencia_id: int
+    referencia_id: Optional[int] = None
+    referencia_texto: Optional[str] = None
     marca: Optional[str] = None
     fecha: date
     maquina_id: Optional[int] = None
@@ -189,6 +192,7 @@ class F015MedicionOut(BaseModel):
     ph: float
     cloro: float
     responsable_id: Optional[int] = None
+    responsable_nombre: Optional[str] = None
     ph_en_rango: bool
     cloro_en_rango: bool
     comentario: Optional[str] = None
@@ -257,9 +261,11 @@ class F204RegistroCreate(BaseModel):
     id: Optional[str] = None  # UUID del cliente (idempotencia)
     fecha: Optional[date] = None  # solo admin puede fijar fecha manual
     turno: int = Field(ge=1, le=3)
+    orden_produccion: Optional[str] = None
     maquina_id: Optional[int] = None
     maquina_texto: Optional[str] = None
-    referencia_id: int
+    referencia_id: Optional[int] = None  # legacy
+    referencia_texto: Optional[str] = None  # referencia traída de la OP
     marca: Optional[str] = None
     cantidad_clase_b: Optional[int] = Field(default=None, ge=0)
     verificacion_desperdicio: Optional[str] = None  # C|NC|NA
@@ -272,9 +278,11 @@ class F204RegistroOut(BaseModel):
     fecha: date
     fecha_hora: datetime
     turno: int
+    orden_produccion: Optional[str] = None
     maquina_id: Optional[int] = None
     maquina_texto: Optional[str] = None
-    referencia_id: int
+    referencia_id: Optional[int] = None
+    referencia_texto: Optional[str] = None
     marca: Optional[str] = None
     cantidad_clase_b: Optional[int] = None
     verificacion_desperdicio: Optional[str] = None
@@ -399,3 +407,15 @@ class PuntoMedicionCreate(BaseModel):
 class PuntoMedicionUpdate(BaseModel):
     nombre: Optional[str] = None
     activo: Optional[bool] = None
+
+
+# Horarios de turnos (configuración)
+class TurnoHorarioItem(BaseModel):
+    dia_semana: int = Field(ge=0, le=6)   # 0=lunes … 6=domingo
+    turno: int = Field(ge=1, le=3)
+    inicio: str                            # "HH:MM"
+    fin: str                               # "HH:MM"
+
+
+class TurnosUpdate(BaseModel):
+    horarios: List[TurnoHorarioItem] = []

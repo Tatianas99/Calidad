@@ -31,6 +31,7 @@ def crear_medicion(
         fecha_hora=data.fecha_hora or fh,
         punto_medicion_id=data.punto_medicion_id,
         punto_texto=data.punto_texto,
+        responsable_nombre=user.nombre,  # automático = usuario en sesión
         ph=data.ph,
         cloro=data.cloro,
         responsable_id=data.responsable_id,

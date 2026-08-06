@@ -28,9 +28,12 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
     cargar()
   }, [])
 
-  const refName = (id: number) => {
-    const r = refs.find((x) => x.id === id)
-    return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : `#${id}`
+  // La referencia ahora viene de la OP como texto; la FK vieja es respaldo.
+  const refName = (reg: F204Registro) => {
+    if (reg.referencia_texto) return reg.referencia_texto
+    if (!reg.referencia_id) return ''
+    const r = refs.find((x) => x.id === reg.referencia_id)
+    return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : ''
   }
   const maqName = (id?: number | null) => (id ? maqs.find((m) => m.id === id)?.nombre ?? `#${id}` : '')
   const maquinaDe = (r: F204Registro) => r.maquina_texto || maqName(r.maquina_id)
@@ -48,8 +51,9 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
       { key: 'fecha', label: 'Fecha', value: (r) => fh(r.fecha_hora).fecha },
       { key: 'hora', label: 'Hora', value: (r) => fh(r.fecha_hora).hora },
       { key: 'turno', label: 'Turno', value: (r) => `T${r.turno}` },
+      { key: 'op', label: 'OP', value: (r) => r.orden_produccion ?? '' },
       { key: 'maquina', label: 'Máquina', value: (r) => maquinaDe(r) },
-      { key: 'referencia', label: 'Referencia', value: (r) => refName(r.referencia_id) },
+      { key: 'referencia', label: 'Referencia', value: (r) => refName(r) },
       { key: 'marca', label: 'Marca', value: (r) => r.marca ?? '' },
       { key: 'claseb', label: 'Clase B', value: (r) => (r.cantidad_clase_b != null ? String(r.cantidad_clase_b) : '') },
       {
@@ -74,7 +78,7 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
       </div>
       <div style={{ gridColumn: '1 / -1' }}>
         <div className="emb-grid">
-          <span className="emb-chip">Referencia: <b>{refName(r.referencia_id)}{r.marca ? ` ${r.marca}` : ''}</b></span>
+          <span className="emb-chip">Referencia: <b>{refName(r)}{r.marca ? ` ${r.marca}` : ''}</b></span>
           <span className="emb-chip">Clase B: <b>{r.cantidad_clase_b ?? '—'}</b></span>
           <span className="emb-chip">Desperdicio: <b className={resClass(r.verificacion_desperdicio)}>{r.verificacion_desperdicio ?? '—'}</b></span>
           <span className="emb-chip">Entregado por: <b>{r.entregado_por_nombre ?? '—'}</b></span>

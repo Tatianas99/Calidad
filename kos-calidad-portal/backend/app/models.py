@@ -1,9 +1,9 @@
 """Modelos ORM del portal de calidad (piloto: catálogos + F-006 + F-015)."""
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, time
 from typing import Optional, List
 
-from sqlalchemy import String, Integer, Boolean, Date, DateTime, Float, ForeignKey
+from sqlalchemy import String, Integer, Boolean, Date, DateTime, Float, ForeignKey, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -71,6 +71,20 @@ class Usuario(Base):
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
 
 
+class TurnoHorario(Base):
+    """Horario de un turno para un día de la semana (0=lunes … 6=domingo).
+
+    Sirve para derivar automáticamente el turno de F-005 y F-158 según la hora
+    del registro. Una fila por (día, turno) con horario definido.
+    """
+    __tablename__ = "turno_horario"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    dia_semana: Mapped[int] = mapped_column(Integer, nullable=False)  # 0=lunes … 6=domingo
+    turno: Mapped[int] = mapped_column(Integer, nullable=False)       # 1, 2, 3
+    hora_inicio: Mapped[time] = mapped_column(Time, nullable=False)
+    hora_fin: Mapped[time] = mapped_column(Time, nullable=False)
+
+
 class ProveedorPapel(Base):
     __tablename__ = "proveedores_papel"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -86,7 +100,8 @@ class F006Registro(Base):
     __tablename__ = "f006_registro"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     orden_produccion: Mapped[Optional[str]] = mapped_column(String(40))  # OP (texto)
-    referencia_id: Mapped[int] = mapped_column(ForeignKey("referencias.id"), nullable=False)
+    referencia_id: Mapped[Optional[int]] = mapped_column(ForeignKey("referencias.id"))  # legacy
+    referencia_texto: Mapped[Optional[str]] = mapped_column(String(200))  # referencia traída de la OP
     marca: Mapped[Optional[str]] = mapped_column(String(80))  # texto libre (marca del producto)
     # Mediciones del producto (texto libre; el operario las escribe con su unidad).
     altura_vaso: Mapped[Optional[str]] = mapped_column(String(40))
@@ -103,7 +118,7 @@ class F006Registro(Base):
     empacador_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
 
-    referencia: Mapped["Referencia"] = relationship()
+    referencia: Mapped[Optional["Referencia"]] = relationship()
     maquina: Mapped["Maquina"] = relationship()
     auxiliar: Mapped[Optional["Persona"]] = relationship(foreign_keys=[auxiliar_id])
     operario: Mapped[Optional["Persona"]] = relationship(foreign_keys=[operario_id])
@@ -154,7 +169,8 @@ class F015Medicion(Base):
     punto_texto: Mapped[Optional[str]] = mapped_column(String(120))  # punto (buscar/escribir)
     ph: Mapped[float] = mapped_column(Float, nullable=False)
     cloro: Mapped[float] = mapped_column(Float, nullable=False)
-    responsable_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
+    responsable_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))  # legacy
+    responsable_nombre: Mapped[Optional[str]] = mapped_column(String(120))  # auto = usuario en sesión
     ph_en_rango: Mapped[bool] = mapped_column(Boolean, nullable=False)
     cloro_en_rango: Mapped[bool] = mapped_column(Boolean, nullable=False)
     comentario: Mapped[Optional[str]] = mapped_column(String(4000))
@@ -223,9 +239,11 @@ class F204Registro(Base):
     fecha: Mapped[date] = mapped_column(Date, nullable=False)
     fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=now_co)
     turno: Mapped[int] = mapped_column(Integer, nullable=False)
+    orden_produccion: Mapped[Optional[str]] = mapped_column(String(40))  # OP (junto a máquina)
     maquina_id: Mapped[Optional[int]] = mapped_column(ForeignKey("maquinas.id"))  # legacy
     maquina_texto: Mapped[Optional[str]] = mapped_column(String(80))  # máquina (buscar/escribir)
-    referencia_id: Mapped[int] = mapped_column(ForeignKey("referencias.id"), nullable=False)
+    referencia_id: Mapped[Optional[int]] = mapped_column(ForeignKey("referencias.id"))  # legacy
+    referencia_texto: Mapped[Optional[str]] = mapped_column(String(200))  # referencia traída de la OP
     marca: Mapped[Optional[str]] = mapped_column(String(80))
     cantidad_clase_b: Mapped[Optional[int]] = mapped_column(Integer)
     verificacion_desperdicio: Mapped[Optional[str]] = mapped_column(String(4))  # C|NC|NA
@@ -239,7 +257,7 @@ class F204Registro(Base):
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
 
     maquina: Mapped["Maquina"] = relationship()
-    referencia: Mapped["Referencia"] = relationship()
+    referencia: Mapped[Optional["Referencia"]] = relationship()
     entregado_por: Mapped[Optional["Persona"]] = relationship()
 
 

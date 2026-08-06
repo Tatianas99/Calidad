@@ -18,8 +18,8 @@ const opValor = (r: F158Recorrido) => r.items.find((i) => i.campo_key === 'op')?
 const contar = (r: F158Recorrido, res: string) =>
   r.items.filter((i) => i.tipo === 'cncna' && i.valor === res).length
 
-const resClass = (v?: string | null) =>
-  v === 'C' ? 'tag-ok' : v === 'NC' ? 'tag-bad' : 'muted'
+const resPill = (v?: string | null) =>
+  'res-pill ' + (v === 'C' ? 'r-c' : v === 'NC' ? 'r-nc' : 'r-na')
 
 export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: string) => void; onBack?: () => void }) {
   const [rows, setRows] = useState<F158Recorrido[]>([])
@@ -89,7 +89,7 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
               <span key={it.campo_key} className="emb-chip">
                 {it.campo_label}:{' '}
                 {it.tipo === 'cncna'
-                  ? <b className={resClass(it.valor)}>{it.valor || '—'}</b>
+                  ? <span className={resPill(it.valor)}>{it.valor || '—'}</span>
                   : <b>{it.valor || '—'}</b>}
               </span>
             ))}
