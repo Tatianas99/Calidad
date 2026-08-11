@@ -587,13 +587,13 @@ function FiltracionCard({
           {excede && (
             <p className="tag-bad">La cantidad que cumple no puede ser mayor a la muestra ({f.cantidad_muestra}).</p>
           )}
-          <div className="row">
-            <Field label="Goteo de vaso con tapa">
-              <OptionButtons options={resOpts} value={goteo} onChange={setGoteo} />
-            </Field>
-            <Field label="Tapa centrada">
-              <OptionButtons options={resOpts} value={tapa} onChange={setTapa} />
-            </Field>
+          <div className="check-row">
+            <span className="label">Goteo de vaso con tapa</span>
+            <OptionButtons options={resOpts} value={goteo} onChange={setGoteo} />
+          </div>
+          <div className="check-row">
+            <span className="label">Tapa centrada</span>
+            <OptionButtons options={resOpts} value={tapa} onChange={setTapa} />
           </div>
           <Field label="Comentario">
             <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} />
