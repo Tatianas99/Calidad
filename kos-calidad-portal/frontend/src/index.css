@@ -131,6 +131,12 @@ textarea { min-height: 70px; resize: vertical; }
 }
 .check-row:last-child { border-bottom: none; }
 .check-row .label { font-weight: 600; }
+/* En móvil: etiqueta arriba y C/NC/NA en una fila de botones iguales y alineados. */
+@media (max-width: 560px) {
+  .check-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .check-row .optbtns { flex-wrap: nowrap; gap: 6px; }
+  .check-row .optbtns .optbtn { flex: 1 1 0; min-width: 0; padding: 12px 4px; text-align: center; }
+}
 .opts { display: flex; gap: 8px; }
 .opt {
   min-width: 56px; min-height: 46px; border-radius: 10px; border: 1px solid var(--border);
