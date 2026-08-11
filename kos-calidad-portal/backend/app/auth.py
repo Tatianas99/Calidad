@@ -24,6 +24,7 @@ PERMISOS = {
     "registrar_f158": "Registrar F-158 (Rutas Calidad)",
     "registrar_f204": "Registrar F-204 (Entrega producto)",
     "ver_registros": "Ver registros",
+    "gestionar_catalogos": "Editar proveedores de papel y puntos de medición",
     "gestionar_usuarios": "Gestionar usuarios",
 }
 ROLES = ["admin", "calidad", "operario"]
@@ -94,9 +95,13 @@ def user_permisos(user: models.Usuario) -> list[str]:
     if user.rol == "admin":
         return list(PERMISOS.keys())
     try:
-        return json.loads(user.permisos or "[]")
+        permisos = json.loads(user.permisos or "[]")
     except Exception:
-        return []
+        permisos = []
+    # El rol "calidad" siempre puede editar proveedores de papel y puntos de medición.
+    if user.rol == "calidad" and "gestionar_catalogos" not in permisos:
+        permisos = permisos + ["gestionar_catalogos"]
+    return permisos
 
 
 def usuario_public(user: models.Usuario) -> dict:

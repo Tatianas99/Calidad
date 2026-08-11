@@ -66,8 +66,8 @@ export default function App() {
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
       {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204'].includes(view)} onClick={() => irA('reportes')} />}
 
-      {hasPermiso('gestionar_usuarios') && <div className="nav-sec">Administración</div>}
-      {hasPermiso('gestionar_usuarios') && <NavItem label="Configuraciones" active={view === 'config'} onClick={() => irA('config')} />}
+      {(hasPermiso('gestionar_usuarios') || hasPermiso('gestionar_catalogos')) && <div className="nav-sec">Administración</div>}
+      {(hasPermiso('gestionar_usuarios') || hasPermiso('gestionar_catalogos')) && <NavItem label="Configuraciones" active={view === 'config'} onClick={() => irA('config')} />}
 
       <div className="nav-foot">
         <div className="nav-user">👤 {user.nombre}<span className="muted"> · {user.rol}</span></div>

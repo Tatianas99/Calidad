@@ -8,7 +8,7 @@ from ..auth import require
 
 router = APIRouter(prefix="/proveedores-papel", tags=["Proveedores papel"])
 
-_admin = require("gestionar_usuarios")
+_admin = require("gestionar_catalogos")
 
 
 @router.get("", response_model=list[schemas.ProveedorPapelOut])

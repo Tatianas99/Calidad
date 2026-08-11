@@ -8,7 +8,7 @@ from ..auth import require
 
 router = APIRouter(prefix="/puntos-medicion", tags=["Puntos de medición"])
 
-_admin = require("gestionar_usuarios")
+_admin = require("gestionar_catalogos")
 
 
 @router.get("", response_model=list[schemas.PuntoMedicionAdminOut])
