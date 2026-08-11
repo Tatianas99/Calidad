@@ -55,7 +55,6 @@ export default function App() {
 
       <NavItem label="Inicio" active={view === 'home'} onClick={() => irA('home')} />
       {hasPermiso('ver_registros') && <NavItem label="📊 Dashboard" active={view === 'dashboard'} onClick={() => irA('dashboard')} />}
-      <a className="nav-item" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📋 Portal de PQRS ↗</a>
 
       {(hasPermiso('registrar_f005') || hasPermiso('registrar_f006') || hasPermiso('registrar_f015') || hasPermiso('registrar_f158') || hasPermiso('registrar_f204')) && <div className="nav-sec">Registrar</div>}
       {hasPermiso('registrar_f005') && <NavItem label="F-005 Liberación de rollos" active={view === 'f005'} onClick={() => irA('f005')} />}
@@ -63,6 +62,7 @@ export default function App() {
       {hasPermiso('registrar_f015') && <NavItem label="F-015 Cloro/PH" active={view === 'f015'} onClick={() => irA('f015')} />}
       {hasPermiso('registrar_f158') && <NavItem label="F-158 Rutas Calidad" active={view === 'f158'} onClick={() => irA('f158')} />}
       {hasPermiso('registrar_f204') && <NavItem label="F-204 Clase B y desperdicio" active={view === 'f204'} onClick={() => irA('f204')} />}
+      <a className="nav-item" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📋 Portal de PQRS ↗</a>
 
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
       {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204'].includes(view)} onClick={() => irA('reportes')} />}
@@ -150,10 +150,6 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
       <h1 style={{ marginTop: 0 }}>Portal de Calidad</h1>
       <p className="muted">Selecciona una opción del menú o una tarjeta.</p>
       <div className="home-grid compact">
-        <a className="card tint blue-3" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>📋</span>
-          <div className="code">PQRS ↗</div><h2>Portal de PQRS</h2>
-        </a>
         {hasPermiso('registrar_f005') && (
           <button className="card tint blue-2" onClick={() => onOpen('f005')}>
             <RollIcon className="card-icon" />
@@ -184,6 +180,10 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
             <div className="code">F-204</div><h2>Clase B y desperdicio</h2>
           </button>
         )}
+        <a className="card tint blue-3" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>📋</span>
+          <div className="code">PQRS ↗</div><h2>Portal de PQRS</h2>
+        </a>
       </div>
     </div>
   )
