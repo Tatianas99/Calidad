@@ -112,6 +112,7 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
             {f.estado === 'finalizada'
               ? <> · <span className="tag-ok">cumple {f.cantidad_cumple}</span> / <span className="tag-bad">no cumple {f.cantidad_nocumple}</span></>
               : <> · <span className="tag-warn">en proceso</span></>}
+            {(f.goteo_vaso_tapa || f.tapa_centrada) && <span className="muted"> · goteo {f.goteo_vaso_tapa || '—'} · tapa centrada {f.tapa_centrada || '—'}</span>}
             {f.comentario ? <span className="muted"> — {f.comentario}</span> : null}
           </div>
         ))}

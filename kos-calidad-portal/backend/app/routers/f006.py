@@ -157,6 +157,8 @@ def registrar_resultado(
         raise HTTPException(status_code=404, detail="Prueba de filtración no encontrada")
     f.cantidad_cumple = data.cantidad_cumple
     f.cantidad_nocumple = data.cantidad_nocumple
+    f.goteo_vaso_tapa = data.goteo_vaso_tapa
+    f.tapa_centrada = data.tapa_centrada
     f.comentario = data.comentario
     f.hora_lectura = now_co()
     f.estado = "finalizada"

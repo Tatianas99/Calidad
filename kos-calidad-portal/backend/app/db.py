@@ -99,6 +99,11 @@ def init_db():
         ("punto_texto", "VARCHAR(120)", "NVARCHAR(120) NULL"),
         ("responsable_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
     ])
+    # F-006 filtración: Goteo de vaso con tapa y Tapa centrada por cada prueba.
+    _ensure_columns("f006_filtracion", [
+        ("goteo_vaso_tapa", "VARCHAR(4)", "NVARCHAR(4) NULL"),
+        ("tapa_centrada", "VARCHAR(4)", "NVARCHAR(4) NULL"),
+    ])
     _make_nullable("f006_registro", "maquina_id", "INT")
     _make_nullable("f204_registro", "maquina_id", "INT")
     _make_nullable("f015_medicion", "punto_medicion_id", "INT")

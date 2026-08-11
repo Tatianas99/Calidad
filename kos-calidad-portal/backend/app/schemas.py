@@ -120,6 +120,8 @@ class FiltracionCreate(BaseModel):
 class FiltracionResultado(BaseModel):
     cantidad_cumple: int = Field(ge=0)     # no filtra
     cantidad_nocumple: int = Field(ge=0)   # filtra
+    goteo_vaso_tapa: Optional[str] = None  # C|NC|NA
+    tapa_centrada: Optional[str] = None    # C|NC|NA
     comentario: Optional[str] = None
 
 
@@ -144,6 +146,8 @@ class FiltracionOut(BaseModel):
     hora_lectura: Optional[datetime] = None
     cantidad_cumple: Optional[int] = None
     cantidad_nocumple: Optional[int] = None
+    goteo_vaso_tapa: Optional[str] = None
+    tapa_centrada: Optional[str] = None
     comentario: Optional[str] = None
     estado: str
     model_config = ConfigDict(from_attributes=True)

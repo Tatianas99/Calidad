@@ -152,6 +152,8 @@ class F006Filtracion(Base):
     hora_lectura: Mapped[Optional[datetime]] = mapped_column(DateTime)
     cantidad_cumple: Mapped[Optional[int]] = mapped_column(Integer)     # no filtra
     cantidad_nocumple: Mapped[Optional[int]] = mapped_column(Integer)   # filtra
+    goteo_vaso_tapa: Mapped[Optional[str]] = mapped_column(String(4))   # C|NC|NA (por prueba)
+    tapa_centrada: Mapped[Optional[str]] = mapped_column(String(4))     # C|NC|NA (por prueba)
     comentario: Mapped[Optional[str]] = mapped_column(String(4000))
     estado: Mapped[str] = mapped_column(String(15), default="en_proceso")  # en_proceso|finalizada
 

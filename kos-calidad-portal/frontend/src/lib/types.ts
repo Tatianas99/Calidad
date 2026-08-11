@@ -27,6 +27,8 @@ export type Filtracion = {
   hora_lectura?: string | null
   cantidad_cumple?: number | null
   cantidad_nocumple?: number | null
+  goteo_vaso_tapa?: string | null
+  tapa_centrada?: string | null
   comentario?: string | null
   estado: 'en_proceso' | 'finalizada'
 }

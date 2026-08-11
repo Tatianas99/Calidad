@@ -19,7 +19,7 @@ RESULTADOS_F158 = ["C", "NC", "NA"]
 MATERIALES = ["P1", "P2", "PS", "Bio", "Kraft", "SBS"]
 
 # Calibres (compartidos). El campo permite además "Otro ¿Cuál?" para escribir uno.
-CALIBRES = ["0.8", "0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18"]
+CALIBRES = ["0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18"]
 
 # Máquinas de prueba de Formación: por ahora las mismas que se usan en F-006.
 MAQUINAS_FORMACION = ["Termoformadora Norte", "Termoformadora Sur", "Selladora Central"]
@@ -86,20 +86,21 @@ PROCESOS_F158 = [
             _c("comparacion_positivo", "Comparación positivo"),
             _c("porta_plancha", "Porta plancha"),
             _c("anilox", "Anilox"),
-            _c("prueba_lapiz", "Prueba de lápiz"),
-            _c("tension_superficial", "Tensión superficial"),
         ],
     },
     {
         "key": "kosexpress",
         "label": "KosExpress",
         "maquinas": [],
-        # NOTA: el Excel recibido no incluye el checklist de KosExpress. Estos son
-        # campos provisionales; reemplazar cuando calidad envíe el listado real.
-        "nota": "Checklist provisional: falta el listado real de KosExpress.",
         "campos": [
             _t("op", "Orden de producción"),
             _ref(),
+            _calibre(),
+            _material(),
+            _c("ficha_tecnica_op", "Ficha técnica Vrs OP"),
+            _c("color", "Color"),
+            _c("registro_textos", "Registro, textos"),
+            _c("comparacion_positivo", "Comparación positivo"),
         ],
     },
     {

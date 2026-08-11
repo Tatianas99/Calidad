@@ -23,6 +23,8 @@ type LocalFiltracion = {
   estado: 'en_proceso' | 'finalizada'
   cantidad_cumple?: number
   cantidad_nocumple?: number
+  goteo_vaso_tapa?: string
+  tapa_centrada?: string
   comentario?: string
 }
 type Producto = {
@@ -112,6 +114,8 @@ export default function F006Form({
               estado: f.estado,
               cantidad_cumple: f.cantidad_cumple ?? undefined,
               cantidad_nocumple: f.cantidad_nocumple ?? undefined,
+              goteo_vaso_tapa: f.goteo_vaso_tapa ?? undefined,
+              tapa_centrada: f.tapa_centrada ?? undefined,
               comentario: f.comentario ?? undefined,
             })),
             operario_id: r.operario_id ?? undefined,
@@ -218,16 +222,16 @@ export default function F006Form({
     feedback(!r.ok)
   }
 
-  async function registrarResultado(prodId: string, filt: LocalFiltracion, cumple: number, comentario: string) {
+  async function registrarResultado(prodId: string, filt: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) {
     const nocumple = filt.cantidad_muestra - cumple
     mapProd(prodId, (p) => ({
       ...p,
       filtraciones: p.filtraciones.map((f) =>
-        f.id === filt.id ? { ...f, estado: 'finalizada', cantidad_cumple: cumple, cantidad_nocumple: nocumple, comentario } : f,
+        f.id === filt.id ? { ...f, estado: 'finalizada', cantidad_cumple: cumple, cantidad_nocumple: nocumple, goteo_vaso_tapa: goteo, tapa_centrada: tapa, comentario } : f,
       ),
     }))
     const r = await apiMutate('PATCH', `/f006/filtracion/${filt.id}`, {
-      cantidad_cumple: cumple, cantidad_nocumple: nocumple, comentario,
+      cantidad_cumple: cumple, cantidad_nocumple: nocumple, goteo_vaso_tapa: goteo, tapa_centrada: tapa, comentario,
     })
     feedback(!r.ok)
   }
@@ -312,7 +316,7 @@ export default function F006Form({
               onPatch={(patch) => patchProd(selected.registroId, patch)}
               onEmbalaje={(item, r) => cambiarEmbalaje(selected.registroId, item, r)}
               onMontar={(tp, tm, c) => montarFiltracion(selected.registroId, tp, tm, c)}
-              onResultado={(f, c, com) => registrarResultado(selected.registroId, f, c, com)}
+              onResultado={(f, c, goteo, tapa, com) => registrarResultado(selected.registroId, f, c, goteo, tapa, com)}
               onFirmas={(patch) => patchProd(selected.registroId, patch)}
               onFinalizar={() => finalizarProducto(selected.registroId)}
             />
@@ -337,7 +341,7 @@ function ProductoDetalle({
   onPatch: (patch: Partial<Producto>) => void
   onEmbalaje: (item: string, resultado: string) => void
   onMontar: (tp: string, tm: string, cant: number) => void
-  onResultado: (f: LocalFiltracion, cumple: number, comentario: string) => void
+  onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) => void
   onFirmas: (patch: Partial<Producto>) => void
   onFinalizar: () => void
 }) {
@@ -510,7 +514,7 @@ function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: st
       <Field label="Tipo de prueba">
         <OptionButtons options={opts.tipos_prueba_f006} value={tp} onChange={setTp} />
       </Field>
-      <Field label="Tipo de material">
+      <Field label="Tipo de papel">
         <OptionButtons options={opts.tipos_material_f006} value={tm} onChange={setTm} />
       </Field>
       <Field label="Cantidad de muestra" hint="unidades montadas">
@@ -530,10 +534,13 @@ function FiltracionCard({
   opts: Opciones | null
   now: number
   productoLabel: string
-  onResultado: (f: LocalFiltracion, cumple: number, comentario: string) => void
+  onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) => void
 }) {
   const [cumple, setCumple] = useState('')
+  const [goteo, setGoteo] = useState('')
+  const [tapa, setTapa] = useState('')
   const [comentario, setComentario] = useState('')
+  const resOpts = (opts?.resultados ?? ['C', 'NC', 'N/A']).map((r) => ({ value: r, label: r }))
 
   const restante = FILT_MS - (now - f.montadaEnMs)
   const listo = restante <= 0
@@ -580,10 +587,19 @@ function FiltracionCard({
           {excede && (
             <p className="tag-bad">La cantidad que cumple no puede ser mayor a la muestra ({f.cantidad_muestra}).</p>
           )}
+          <div className="row">
+            <Field label="Goteo de vaso con tapa">
+              <OptionButtons options={resOpts} value={goteo} onChange={setGoteo} />
+            </Field>
+            <Field label="Tapa centrada">
+              <OptionButtons options={resOpts} value={tapa} onChange={setTapa} />
+            </Field>
+          </div>
           <Field label="Comentario">
             <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} />
           </Field>
-          <button className="btn btn-primary" disabled={invalido} onClick={() => onResultado(f, Number(cumple), comentario)}>
+          {(!goteo || !tapa) && <p className="hint">Selecciona Goteo de vaso con tapa y Tapa centrada.</p>}
+          <button className="btn btn-primary" disabled={invalido || !goteo || !tapa} onClick={() => onResultado(f, Number(cumple), goteo, tapa, comentario)}>
             Registrar resultado
           </button>
         </>
@@ -591,6 +607,9 @@ function FiltracionCard({
         <p style={{ margin: 0 }}>
           <span className="tag-ok">Cumple: {f.cantidad_cumple}</span>{' · '}
           <span className="tag-bad">No cumple: {f.cantidad_nocumple}</span>
+          {(f.goteo_vaso_tapa || f.tapa_centrada) && (
+            <><br /><span className="muted">Goteo: {f.goteo_vaso_tapa || '—'} · Tapa centrada: {f.tapa_centrada || '—'}</span></>
+          )}
           {f.comentario ? <><br /><span className="muted">{f.comentario}</span></> : null}
         </p>
       )}

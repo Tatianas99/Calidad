@@ -2,18 +2,12 @@
 
 RESULTADOS = ["C", "NC", "N/A"]
 
-# F-006 — ítems del checklist de embalaje (orden = orden del formato en papel).
+# F-006 — ítems del checklist de embalaje.
+# Goteo de vaso con tapa y Tapa centrada se piden ahora por cada prueba de
+# filtración (no en el embalaje). Aquí quedan solo los ítems generales.
 EMBALAJE_ITEMS_F006 = [
-    ("unidad_empaque", "Unidad de empaque"),
-    ("rotulo_caja", "Rótulo de caja"),
-    ("sellado_bolsa", "Sellado de bolsa"),
-    ("goteo_vaso_tapa", "Goteo de vaso con tapa"),
     ("despegado_manual", "Despegado manual"),
     ("impresion", "Impresión"),
-    ("stickers_bolsa", "Stickers bolsa"),
-    ("rotulo_ecologico", "Rótulo ecológico"),
-    ("tapa_centrada", "Tapa centrada"),
-    ("prueba_lapiz", "Prueba de lápiz"),
 ]
 
 # F-006 — tipos de prueba de filtración.
@@ -25,12 +19,14 @@ TIPOS_PRUEBA_F006 = [
     ("glicerina", "Glicerina"),
 ]
 
-# F-006 — tipos de material.
+# F-006 — tipo de papel (misma lista estándar de "Tipo de material" de F-158).
 TIPOS_MATERIAL_F006 = [
     ("P1", "P1"),
     ("P2", "P2"),
-    ("cero_plastico", "Cero plástico"),
-    ("SP", "SP"),
+    ("PS", "PS"),
+    ("Bio", "Bio"),
+    ("Kraft", "Kraft"),
+    ("SBS", "SBS"),
 ]
 
 # Conjuntos de claves para validación.
