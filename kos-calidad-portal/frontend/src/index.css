@@ -345,6 +345,20 @@ textarea { min-height: 70px; resize: vertical; }
 .res-pill.r-nc { background: var(--bad-bg); color: var(--bad); }
 .res-pill.r-na { background: var(--surface-2); color: var(--muted); }
 
+/* Tarjeta de prueba de filtración en los reportes F-006 */
+.filt-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: var(--surface-2); }
+.filt-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.filt-card-head strong { font-size: .98rem; }
+.filt-chip { font-size: .74rem; padding: 2px 9px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+.filt-card-stats { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 8px; }
+.fc-stat { display: flex; flex-direction: column; line-height: 1.15; font-weight: 800; font-size: .98rem; }
+.fc-stat small { font-size: .66rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.fc-stat.ok { color: var(--ok); }
+.fc-stat.bad { color: var(--bad); }
+.filt-card-checks { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; }
+.filt-card-checks > span { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; }
+.filt-card-com { font-size: .86rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 7px; margin-top: 8px; }
+
 /* ---- Usuarios ---- */
 .user-row { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
 .user-row.inactivo { opacity: .6; }

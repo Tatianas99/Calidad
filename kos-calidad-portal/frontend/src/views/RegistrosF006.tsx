@@ -8,6 +8,8 @@ import type { Referencia, Maquina, Persona, Opciones, F006Registro, Option } fro
 const label = (opts: Option[], v: string) => opts.find((o) => o.value === v)?.label ?? v
 const hhmm = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''
+const resPill = (v?: string | null) =>
+  'res-pill ' + (v === 'C' ? 'r-c' : v === 'NC' ? 'r-nc' : 'r-na')
 
 export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: string) => void; onBack?: () => void }) {
   const [rows, setRows] = useState<F006Registro[]>([])
@@ -105,15 +107,29 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
         <h4>Pruebas de filtración</h4>
         {r.filtraciones.length === 0 && <p className="muted">Sin pruebas.</p>}
         {r.filtraciones.map((f) => (
-          <div key={f.id} className="detalle-filt">
-            <strong>{opts ? label(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba}</strong>
-            {' · '}{opts ? label(opts.tipos_material_f006, f.tipo_material) : f.tipo_material}
-            {' · montada '}{hhmm(f.hora_montaje)} · muestra {f.cantidad_muestra}
-            {f.estado === 'finalizada'
-              ? <> · <span className="tag-ok">cumple {f.cantidad_cumple}</span> / <span className="tag-bad">no cumple {f.cantidad_nocumple}</span></>
-              : <> · <span className="tag-warn">en proceso</span></>}
-            {(f.goteo_vaso_tapa || f.tapa_centrada) && <span className="muted"> · goteo {f.goteo_vaso_tapa || '—'} · tapa centrada {f.tapa_centrada || '—'}</span>}
-            {f.comentario ? <span className="muted"> — {f.comentario}</span> : null}
+          <div key={f.id} className="filt-card">
+            <div className="filt-card-head">
+              <strong>{opts ? label(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba}</strong>
+              <span className="filt-chip">{opts ? label(opts.tipos_material_f006, f.tipo_material) : f.tipo_material}</span>
+              <span className={'badge ' + (f.estado === 'finalizada' ? 'fin' : 'proc')} style={{ marginLeft: 'auto' }}>
+                {f.estado === 'finalizada' ? 'Finalizada' : 'En proceso'}
+              </span>
+            </div>
+            <div className="filt-card-stats">
+              <span className="fc-stat"><small>Montada</small>{hhmm(f.hora_montaje)}</span>
+              <span className="fc-stat"><small>Muestra</small>{f.cantidad_muestra}</span>
+              {f.estado === 'finalizada' && <>
+                <span className="fc-stat ok"><small>Cumple</small>{f.cantidad_cumple}</span>
+                <span className="fc-stat bad"><small>No cumple</small>{f.cantidad_nocumple}</span>
+              </>}
+            </div>
+            {(f.goteo_vaso_tapa || f.tapa_centrada) && (
+              <div className="filt-card-checks">
+                <span>Goteo de vaso con tapa <span className={resPill(f.goteo_vaso_tapa)}>{f.goteo_vaso_tapa || '—'}</span></span>
+                <span>Tapa centrada <span className={resPill(f.tapa_centrada)}>{f.tapa_centrada || '—'}</span></span>
+              </div>
+            )}
+            {f.comentario && <div className="filt-card-com">{f.comentario}</div>}
           </div>
         ))}
       </div>
