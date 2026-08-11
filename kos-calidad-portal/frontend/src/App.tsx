@@ -117,31 +117,26 @@ function Reportes({ onOpen }: { onOpen: (v: View) => void }) {
     <div>
       <h1 style={{ marginTop: 0 }}>Ver reportes</h1>
       <p className="muted">Selecciona el reporte que quieres consultar.</p>
-      <div className="home-grid">
+      <div className="home-grid compact">
         <button className="card tint blue-2" onClick={() => onOpen('reg005')}>
           <RollIcon className="card-icon" />
           <div className="code">F-005</div><h2>Liberación de rollos</h2>
-          <p>Consulta y filtra las liberaciones de rollo.</p>
         </button>
         <button className="card tint blue-1" onClick={() => onOpen('reg006')}>
           <CupsIcon className="card-icon" />
           <div className="code">F-006</div><h2>Pruebas filtración</h2>
-          <p>Consulta y filtra los registros de proceso de vasos.</p>
         </button>
         <button className="card tint blue-2" onClick={() => onOpen('reg015')}>
           <WaterTestIcon className="card-icon" />
           <div className="code">F-015</div><h2>Cloro / PH</h2>
-          <p>Consulta y filtra las mediciones de agua.</p>
         </button>
         <button className="card tint blue-3" onClick={() => onOpen('reg158')}>
           <BadgeIcon className="card-icon" />
           <div className="code">F-158</div><h2>Rutas Calidad</h2>
-          <p>Consulta y filtra los recorridos por proceso.</p>
         </button>
         <button className="card tint blue-1" onClick={() => onOpen('reg204')}>
           <TrashIcon className="card-icon" />
           <div className="code">F-204</div><h2>Clase B y desperdicio</h2>
-          <p>Consulta y filtra las entregas por turno.</p>
         </button>
       </div>
     </div>
@@ -153,6 +148,11 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
     <div>
       <h1 style={{ marginTop: 0 }}>Portal de Calidad</h1>
       <p className="muted">Selecciona una opción del menú o una tarjeta.</p>
+      <div style={{ marginBottom: 18 }}>
+        <a className="btn btn-primary" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+          📋 Ir al portal de PQRS ↗
+        </a>
+      </div>
       <div className="home-grid">
         {hasPermiso('registrar_f005') && (
           <button className="card tint blue-2" onClick={() => onOpen('f005')}>

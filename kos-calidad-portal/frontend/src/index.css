@@ -58,6 +58,12 @@ body {
 
 /* Tarjetas de inicio */
 .home-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+/* Variante compacta (Ver reportes): tarjetas más pequeñas, solo título. */
+.home-grid.compact { gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.home-grid.compact .card { padding: 14px; }
+.home-grid.compact .card-icon { width: 32px; height: 32px; margin-bottom: 6px; }
+.home-grid.compact .card .code { font-size: .78rem; }
+.home-grid.compact .card h2 { font-size: 1rem; margin: 2px 0 0; }
 .card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 22px; box-shadow: var(--shadow); cursor: pointer; text-align: left;
