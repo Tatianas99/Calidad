@@ -55,6 +55,7 @@ export default function App() {
 
       <NavItem label="Inicio" active={view === 'home'} onClick={() => irA('home')} />
       {hasPermiso('ver_registros') && <NavItem label="📊 Dashboard" active={view === 'dashboard'} onClick={() => irA('dashboard')} />}
+      <a className="nav-item" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📋 Portal de PQRS ↗</a>
 
       {(hasPermiso('registrar_f005') || hasPermiso('registrar_f006') || hasPermiso('registrar_f015') || hasPermiso('registrar_f158') || hasPermiso('registrar_f204')) && <div className="nav-sec">Registrar</div>}
       {hasPermiso('registrar_f005') && <NavItem label="F-005 Liberación de rollos" active={view === 'f005'} onClick={() => irA('f005')} />}
@@ -148,45 +149,39 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
     <div>
       <h1 style={{ marginTop: 0 }}>Portal de Calidad</h1>
       <p className="muted">Selecciona una opción del menú o una tarjeta.</p>
-      <div style={{ marginBottom: 18 }}>
-        <a className="btn btn-primary" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-          📋 Ir al portal de PQRS ↗
+      <div className="home-grid compact">
+        <a className="card tint blue-3" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>📋</span>
+          <div className="code">PQRS ↗</div><h2>Portal de PQRS</h2>
         </a>
-      </div>
-      <div className="home-grid">
         {hasPermiso('registrar_f005') && (
           <button className="card tint blue-2" onClick={() => onOpen('f005')}>
             <RollIcon className="card-icon" />
             <div className="code">F-005</div><h2>Liberación de rollos</h2>
-            <p>Lote, material, calibre, estado y liberación.</p>
           </button>
         )}
         {hasPermiso('registrar_f006') && (
           <button className="card tint blue-1" onClick={() => onOpen('f006')}>
             <CupsIcon className="card-icon" />
             <div className="code">F-006</div><h2>Pruebas filtración</h2>
-            <p>Producto, embalaje, pruebas de filtración y firmas.</p>
           </button>
         )}
         {hasPermiso('registrar_f015') && (
           <button className="card tint blue-2" onClick={() => onOpen('f015')}>
             <WaterTestIcon className="card-icon" />
             <div className="code">F-015</div><h2>Registrar cloro/PH</h2>
-            <p>Medición diaria por turno con rangos.</p>
           </button>
         )}
         {hasPermiso('registrar_f158') && (
           <button className="card tint blue-3" onClick={() => onOpen('f158')}>
             <BadgeIcon className="card-icon" />
             <div className="code">F-158</div><h2>Rutas Calidad</h2>
-            <p>Recorridos por proceso con checklist y evidencias.</p>
           </button>
         )}
         {hasPermiso('registrar_f204') && (
           <button className="card tint blue-1" onClick={() => onOpen('f204')}>
             <TrashIcon className="card-icon" />
             <div className="code">F-204</div><h2>Clase B y desperdicio</h2>
-            <p>Registro por turno: máquina, referencia y responsables.</p>
           </button>
         )}
       </div>
