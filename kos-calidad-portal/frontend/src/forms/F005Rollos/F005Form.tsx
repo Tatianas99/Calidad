@@ -236,7 +236,7 @@ export default function F005Form({
                     <input type="date" value={selected.fecha ?? hoy()} onChange={(e) => upd({ fecha: e.target.value })} />
                   </Field>
                 )}
-                <Field label="Lote" hint="escribir">
+                <Field label="Lote">
                   <input value={selected.lote ?? ''} onChange={(e) => upd({ lote: e.target.value })} />
                 </Field>
               </div>
@@ -246,10 +246,10 @@ export default function F005Form({
               </Field>
 
               <div className="row">
-                <Field label="Ancho" hint="escribir">
+                <Field label="Ancho">
                   <input value={selected.ancho ?? ''} onChange={(e) => upd({ ancho: e.target.value })} />
                 </Field>
-                <Field label="Kg" hint="escribir">
+                <Field label="Kg">
                   <input value={selected.kg ?? ''} onChange={(e) => upd({ kg: e.target.value })} />
                 </Field>
               </div>

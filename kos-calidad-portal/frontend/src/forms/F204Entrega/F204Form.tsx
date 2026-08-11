@@ -189,7 +189,7 @@ export default function F204Form({
                 <Field label="Máquina" hint="buscar o escribir">
                   <ComboBox value={selected.maquina ?? ''} onChange={(v) => upd({ maquina: v })} options={maqs.map((m) => m.nombre)} placeholder="Buscar o escribir máquina…" />
                 </Field>
-                <Field label="Orden de producción" hint="trae referencia y marca">
+                <Field label="Orden de producción">
                   <OPSearch
                     value={selected.orden_produccion ?? ''}
                     onChange={(v) => upd({ orden_produccion: v })}
@@ -199,10 +199,10 @@ export default function F204Form({
               </div>
 
               <div className="row">
-                <Field label="Referencia" hint="se llena con la OP">
+                <Field label="Referencia">
                   <input value={selected.referencia_texto ?? ''} onChange={(e) => upd({ referencia_texto: e.target.value })} placeholder="Se autollena al elegir la OP" />
                 </Field>
-                <Field label="Marca" hint="se llena con la OP">
+                <Field label="Marca">
                   <input value={selected.marca ?? ''} onChange={(e) => upd({ marca: e.target.value })} placeholder="Se autollena al elegir la OP" />
                 </Field>
               </div>
@@ -217,7 +217,7 @@ export default function F204Form({
               </div>
 
               <div className="row">
-                <Field label="Entregado por" hint="busca por nombre (operarios)">
+                <Field label="Entregado por">
                   <SearchSelect
                     items={operarios.map((p) => ({ id: p.id, label: p.nombre }))}
                     value={selected.entregado_por_id}

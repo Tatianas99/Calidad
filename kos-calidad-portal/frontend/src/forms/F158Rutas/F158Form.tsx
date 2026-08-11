@@ -570,12 +570,12 @@ function CampoField({
     const auto = !!prodTexto.trim()
     return (
       <div className="row" style={{ marginBottom: 8 }}>
-        <Field label={campo.label} hint={auto ? 'traído de la OP' : 'busca por palabras clave'}>
+        <Field label={campo.label}>
           {auto
             ? <input value={prodTexto} onChange={(e) => onProdText(e.target.value)} placeholder="Se autollena al elegir la OP" />
             : <ReferenceSearch referencias={refs} value={refId} onChange={onRefId} />}
         </Field>
-        <Field label="Marca" hint={auto ? 'traído de la OP' : 'texto libre'}>
+        <Field label="Marca">
           <input value={marca} onChange={(e) => onMarca(e.target.value)} />
         </Field>
       </div>
@@ -584,13 +584,13 @@ function CampoField({
   if (campo.tipo === 'texto') {
     if (campo.key === 'op') {
       return (
-        <Field label={campo.label} hint="trae referencia y marca">
+        <Field label={campo.label}>
           <OPSearch value={vals[campo.key] ?? ''} onChange={onVal} onResolve={onOpResolve} />
         </Field>
       )
     }
     return (
-      <Field label={campo.label} hint="escribir">
+      <Field label={campo.label}>
         <input value={vals[campo.key] ?? ''} onChange={(e) => onVal(e.target.value)} />
       </Field>
     )

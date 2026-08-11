@@ -374,7 +374,7 @@ function ProductoDetalle({
       {tab === 'pe' && (
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Producto</h3>
-          <Field label="Orden de producción" hint="trae referencia y marca (va primero)">
+          <Field label="Orden de producción">
             <OPSearch
               value={prod.orden_produccion ?? ''}
               onChange={(v) => onPatch({ orden_produccion: v })}
@@ -382,10 +382,10 @@ function ProductoDetalle({
             />
           </Field>
           <div className="row">
-            <Field label="Referencia" hint="se llena con la OP">
+            <Field label="Referencia">
               <input value={prod.referencia_texto ?? ''} onChange={(e) => onPatch({ referencia_texto: e.target.value })} onBlur={() => onCabecera({})} placeholder="Se autollena al elegir la OP" />
             </Field>
-            <Field label="Marca" hint="se llena con la OP">
+            <Field label="Marca">
               <input value={prod.marca ?? ''} onChange={(e) => onPatch({ marca: e.target.value })} onBlur={() => onCabecera({})} placeholder="Se autollena al elegir la OP" />
             </Field>
           </div>
@@ -455,12 +455,11 @@ function ProductoDetalle({
       {tab === 'firmas' && (
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Firmas</h3>
-          <p className="muted">El auxiliar de calidad se registra automáticamente con la persona en turno (usuario en sesión).</p>
           <div className="row">
-            <Field label="Auxiliar de calidad" hint="automático · persona en turno">
+            <Field label="Auxiliar de calidad">
               <input type="text" value={getUser()?.nombre ?? ''} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />
             </Field>
-            <Field label="Operario(a)" hint="busca por nombre (todos los empleados)">
+            <Field label="Operario(a)">
               <SearchSelect
                 items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
                 value={prod.operario_id}
@@ -468,7 +467,7 @@ function ProductoDetalle({
                 placeholder="Buscar operario…"
               />
             </Field>
-            <Field label="Empacador(a)" hint="busca por nombre (todos los empleados)">
+            <Field label="Empacador(a)">
               <SearchSelect
                 items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
                 value={prod.empacador_id}
@@ -521,7 +520,7 @@ function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: st
         <input type="number" min={0} inputMode="numeric" value={cant} onChange={(e) => setCant(e.target.value)} />
       </Field>
       <button className="btn btn-accent" disabled={!tp || !tm || cant === ''} onClick={montar}>
-        Montar prueba (hora automática)
+        Montar prueba
       </button>
     </div>
   )

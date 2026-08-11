@@ -178,9 +178,6 @@ PROCESOS_F158 = [
         "key": "platos",
         "label": "Platos",
         "maquinas": [],
-        # NOTA: en el Excel el checklist de Platos aparece cortado; incluye los
-        # ítems visibles. Completar si faltan campos al final.
-        "nota": "Checklist posiblemente incompleto (el Excel aparece cortado).",
         "campos": [
             _t("op", "Orden de producción"),
             _ref(),
