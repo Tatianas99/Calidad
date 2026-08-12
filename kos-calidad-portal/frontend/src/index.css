@@ -275,11 +275,22 @@ textarea { min-height: 70px; resize: vertical; }
 .tag-warn { color: var(--warn); font-weight: 700; }
 
 /* ---- Login ---- */
-.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: var(--bg); }
-.login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; }
-.login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.login-brand h1 { font-size: 1.35rem; margin: 0; }
-.login-brand .code { background: var(--brand); color: var(--brand-ink); padding: 4px 9px; border-radius: 8px; font-weight: 800; }
+.login-wrap {
+  position: relative; overflow: hidden; min-height: 100vh; display: grid; place-items: center; padding: 20px;
+  background: radial-gradient(1100px 620px at 50% -8%, rgba(37, 120, 214, .12), var(--bg) 62%);
+}
+/* Collage de vasos de fondo, tenue detrás de la tarjeta. */
+.login-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; color: var(--brand); opacity: .12; pointer-events: none; }
+:root:not([data-theme="light"]) .login-bg { opacity: .10; }
+:root[data-theme="dark"] .login-bg { opacity: .10; }
+.login-card {
+  position: relative; z-index: 1; width: 100%; max-width: 380px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 18px 50px rgba(15, 40, 90, .18); padding: 28px;
+}
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.login-brand h1 { font-size: 1.3rem; margin: 0; line-height: 1.15; }
+.login-logo { width: 48px; height: 48px; object-fit: contain; border-radius: 11px; background: #fff; padding: 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); flex-shrink: 0; }
+.login-sub { font-size: .72rem; font-weight: 700; letter-spacing: .09em; color: var(--brand); }
 
 /* ---- Dashboard: navegación lateral ---- */
 .dash-body { display: grid; grid-template-columns: 240px 1fr; align-items: start; }
