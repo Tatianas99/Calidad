@@ -47,7 +47,14 @@ export default function Login({ onLogged }: { onLogged: () => void }) {
         <rect width="100%" height="100%" fill="url(#cupPat)" />
       </svg>
 
-      <form className="login-card" onSubmit={submit}>
+      <div className="login-stack">
+        <div className="login-hero">
+          <img src="/logo-kos.png" alt="KOS Colombia" className="login-hero-logo" />
+          <div className="login-hero-name">KOS COLOMBIA</div>
+          <div className="login-hero-tag">Sistema de Gestión de Calidad</div>
+        </div>
+
+        <form className="login-card" onSubmit={submit}>
         <div className="login-brand">
           <img src="/logo-kos.png" alt="KOS Colombia" className="login-logo" />
           <div>
@@ -66,7 +73,8 @@ export default function Login({ onLogged }: { onLogged: () => void }) {
         <button className="btn btn-primary" style={{ width: '100%' }} disabled={loading || !username || !password}>
           {loading ? 'Ingresando…' : 'Ingresar'}
         </button>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }
