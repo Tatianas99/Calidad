@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiGet, apiSend, fileUrl } from '../lib/api'
 import { getUser } from '../lib/auth'
+import { matchKeywords } from '../lib/fuzzy'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
 import type { F158Config, F158Recorrido, F158Item } from '../lib/types'
@@ -15,6 +16,9 @@ const fechaHora = (iso: string) => {
 const refItem = (r: F158Recorrido): F158Item | undefined =>
   r.items.find((i) => i.tipo === 'referencia' && i.valor)
 const opValor = (r: F158Recorrido) => r.items.find((i) => i.campo_key === 'op')?.valor ?? ''
+// Lote de rollo (Slitter) o Número del rollo (Troqueladora), según el proceso.
+const rolloValor = (r: F158Recorrido) =>
+  r.items.find((i) => i.campo_key === 'lote_rollo' || i.campo_key === 'numero_rollo')?.valor ?? ''
 const contar = (r: F158Recorrido, res: string) =>
   r.items.filter((i) => i.tipo === 'cncna' && i.valor === res).length
 
@@ -25,6 +29,7 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
   const [rows, setRows] = useState<F158Recorrido[]>([])
   const [config, setConfig] = useState<F158Config | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [busqRollo, setBusqRollo] = useState('')
   const admin = getUser()?.rol === 'admin'
 
   const cargar = () => {
@@ -59,6 +64,7 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
       { key: 'proceso', label: 'Proceso', value: (r) => procLabel(r.proceso) },
       { key: 'maquina', label: 'Máquina', value: (r) => r.maquina ?? '' },
       { key: 'op', label: 'OP', value: (r) => opValor(r) },
+      { key: 'rollo', label: 'Lote / N° rollo', value: (r) => rolloValor(r) },
       { key: 'referencia', label: 'Referencia', value: (r) => refItem(r)?.valor ?? '' },
       { key: 'responsable', label: 'Responsable', value: (r) => r.responsable_nombre ?? '' },
       { key: 'cumple', label: 'Cumple (C)', value: (r) => String(contar(r, 'C')) },
@@ -129,8 +135,23 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
         <h2>Registros de Rutas Calidad</h2>
         <button className="btn btn-ghost" style={{ marginLeft: 'auto', minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
       </div>
+      <div style={{ margin: '4px 0 12px' }}>
+        <input
+          className="filt-search"
+          type="search"
+          placeholder="🔎 Buscar por N° o lote de rollo (Slitter / Troqueladora)…"
+          value={busqRollo}
+          onChange={(e) => setBusqRollo(e.target.value)}
+          style={{ maxWidth: 420 }}
+        />
+      </div>
       {cargando ? <p className="muted">Cargando…</p> : (
-        <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} renderDetail={renderDetail} />
+        <FilterTable
+          columns={columns}
+          rows={rows.filter((r) => matchKeywords(busqRollo, rolloValor(r)))}
+          getKey={(r) => r.id}
+          renderDetail={renderDetail}
+        />
       )}
     </div>
   )
