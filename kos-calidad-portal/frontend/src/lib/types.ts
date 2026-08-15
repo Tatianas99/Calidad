@@ -24,6 +24,7 @@ export type Filtracion = {
   tipo_prueba: string
   tipo_material: string
   cantidad_muestra: number
+  temp_90?: string | null
   hora_lectura?: string | null
   cantidad_cumple?: number | null
   cantidad_nocumple?: number | null

@@ -18,6 +18,7 @@ type LocalFiltracion = {
   tipo_prueba: string
   tipo_material: string
   cantidad_muestra: number
+  temp_90?: string
   montadaEnMs: number
   estado: 'en_proceso' | 'finalizada'
   cantidad_cumple?: number
@@ -109,6 +110,7 @@ export default function F006Form({
               tipo_prueba: f.tipo_prueba,
               tipo_material: f.tipo_material,
               cantidad_muestra: f.cantidad_muestra,
+              temp_90: f.temp_90 ?? undefined,
               montadaEnMs: new Date(f.hora_montaje).getTime(),
               estado: f.estado,
               cantidad_cumple: f.cantidad_cumple ?? undefined,
@@ -208,15 +210,15 @@ export default function F006Form({
     programarGuardarEmbalaje(prodId)
   }
 
-  async function montarFiltracion(prodId: string, tp: string, tm: string, cant: number) {
+  async function montarFiltracion(prodId: string, tp: string, tm: string, cant: number, temp90: string) {
     const id = uuid()
     const nueva: LocalFiltracion = {
-      id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant,
+      id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant, temp_90: temp90 || undefined,
       montadaEnMs: Date.now(), estado: 'en_proceso',
     }
     mapProd(prodId, (p) => ({ ...p, filtraciones: [...p.filtraciones, nueva] }))
     const r = await apiMutate('POST', `/f006/registros/${prodId}/filtracion`, {
-      id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant,
+      id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant, temp_90: temp90 || null,
     })
     feedback(!r.ok)
   }
@@ -314,7 +316,7 @@ export default function F006Form({
               onCabecera={(patch) => cambiarCabecera(selected, patch)}
               onPatch={(patch) => patchProd(selected.registroId, patch)}
               onEmbalaje={(item, r) => cambiarEmbalaje(selected.registroId, item, r)}
-              onMontar={(tp, tm, c) => montarFiltracion(selected.registroId, tp, tm, c)}
+              onMontar={(tp, tm, c, temp) => montarFiltracion(selected.registroId, tp, tm, c, temp)}
               onResultado={(f, c, goteo, tapa, com) => registrarResultado(selected.registroId, f, c, goteo, tapa, com)}
               onFirmas={(patch) => patchProd(selected.registroId, patch)}
               onFinalizar={() => finalizarProducto(selected.registroId)}
@@ -339,7 +341,7 @@ function ProductoDetalle({
   onCabecera: (patch: Partial<Producto>) => void
   onPatch: (patch: Partial<Producto>) => void
   onEmbalaje: (item: string, resultado: string) => void
-  onMontar: (tp: string, tm: string, cant: number) => void
+  onMontar: (tp: string, tm: string, cant: number, temp90: string) => void
   onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) => void
   onFirmas: (patch: Partial<Producto>) => void
   onFinalizar: () => void
@@ -496,15 +498,16 @@ function ProductoDetalle({
   )
 }
 
-function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: string, tm: string, c: number) => void }) {
+function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: string, tm: string, c: number, temp90: string) => void }) {
   const [tp, setTp] = useState('')
   const [tm, setTm] = useState('')
   const [cant, setCant] = useState('')
   const [temp90, setTemp90] = useState('')  // solo aplica a Café caliente
 
+  const faltaTemp = tp === 'cafe_caliente' && !temp90
   const montar = () => {
-    if (!tp || !tm || cant === '') return
-    onMontar(tp, tm, Number(cant))
+    if (!tp || !tm || cant === '' || faltaTemp) return
+    onMontar(tp, tm, Number(cant), temp90)
     setTp(''); setTm(''); setCant(''); setTemp90('')
   }
 
@@ -536,7 +539,7 @@ function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: st
       <Field label="Cantidad de muestra" hint="unidades montadas">
         <input type="number" min={0} inputMode="numeric" value={cant} onChange={(e) => setCant(e.target.value)} />
       </Field>
-      <button className="btn btn-accent" disabled={!tp || !tm || cant === ''} onClick={montar}>
+      <button className="btn btn-accent" disabled={!tp || !tm || cant === '' || faltaTemp} onClick={montar}>
         Montar prueba
       </button>
     </div>

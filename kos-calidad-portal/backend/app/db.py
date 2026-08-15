@@ -103,6 +103,7 @@ def init_db():
     _ensure_columns("f006_filtracion", [
         ("goteo_vaso_tapa", "VARCHAR(4)", "NVARCHAR(4) NULL"),
         ("tapa_centrada", "VARCHAR(4)", "NVARCHAR(4) NULL"),
+        ("temp_90", "VARCHAR(4)", "NVARCHAR(4) NULL"),
     ])
     # Firmas F-006 en texto (buscar o escribir si no está en la lista).
     _ensure_columns("f006_registro", [

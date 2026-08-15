@@ -135,6 +135,7 @@ def agregar_filtracion(
         tipo_prueba=data.tipo_prueba,
         tipo_material=data.tipo_material,
         cantidad_muestra=data.cantidad_muestra,
+        temp_90=data.temp_90,
         hora_montaje=now_co(),
         estado="en_proceso",
     )

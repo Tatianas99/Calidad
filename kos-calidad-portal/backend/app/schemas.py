@@ -101,6 +101,7 @@ class FiltracionCreate(BaseModel):
     tipo_prueba: str
     tipo_material: str
     cantidad_muestra: int = Field(ge=0)
+    temp_90: Optional[str] = None  # café caliente: si|no
 
     @field_validator("tipo_prueba")
     @classmethod
@@ -145,6 +146,7 @@ class FiltracionOut(BaseModel):
     tipo_prueba: str
     tipo_material: str
     cantidad_muestra: int
+    temp_90: Optional[str] = None
     hora_lectura: Optional[datetime] = None
     cantidad_cumple: Optional[int] = None
     cantidad_nocumple: Optional[int] = None

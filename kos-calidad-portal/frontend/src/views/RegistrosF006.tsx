@@ -123,6 +123,14 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
                 <span className="fc-stat bad"><small>No cumple</small>{f.cantidad_nocumple}</span>
               </>}
             </div>
+            {f.temp_90 && (
+              <div className="filt-card-checks">
+                <span>
+                  ¿Temperatura de 90°C? <span className={'res-pill ' + (f.temp_90 === 'si' ? 'r-c' : 'r-nc')}>{f.temp_90 === 'si' ? 'Sí' : 'No'}</span>
+                  {f.temp_90 === 'no' && <b className="tag-warn" style={{ marginLeft: 6 }}>⚠ Solicitar ajuste de temperatura</b>}
+                </span>
+              </div>
+            )}
             {(f.goteo_vaso_tapa || f.tapa_centrada) && (
               <div className="filt-card-checks">
                 <span>Goteo de vaso con tapa <span className={resPill(f.goteo_vaso_tapa)}>{f.goteo_vaso_tapa || '—'}</span></span>

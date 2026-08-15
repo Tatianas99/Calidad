@@ -151,6 +151,7 @@ class F006Filtracion(Base):
     tipo_prueba: Mapped[str] = mapped_column(String(30), nullable=False)
     tipo_material: Mapped[str] = mapped_column(String(20), nullable=False)
     cantidad_muestra: Mapped[int] = mapped_column(Integer, nullable=False)
+    temp_90: Mapped[Optional[str]] = mapped_column(String(4))  # café caliente: si|no (¿90°C?)
     hora_lectura: Mapped[Optional[datetime]] = mapped_column(DateTime)
     cantidad_cumple: Mapped[Optional[int]] = mapped_column(Integer)     # no filtra
     cantidad_nocumple: Mapped[Optional[int]] = mapped_column(Integer)   # filtra
