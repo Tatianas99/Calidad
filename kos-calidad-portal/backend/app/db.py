@@ -104,6 +104,11 @@ def init_db():
         ("goteo_vaso_tapa", "VARCHAR(4)", "NVARCHAR(4) NULL"),
         ("tapa_centrada", "VARCHAR(4)", "NVARCHAR(4) NULL"),
     ])
+    # Firmas F-006 en texto (buscar o escribir si no está en la lista).
+    _ensure_columns("f006_registro", [
+        ("operario_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
+        ("empacador_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
+    ])
     _make_nullable("f006_registro", "maquina_id", "INT")
     _make_nullable("f204_registro", "maquina_id", "INT")
     _make_nullable("f015_medicion", "punto_medicion_id", "INT")

@@ -8,7 +8,6 @@ import ChecklistCNCNA from '../../components/ChecklistCNCNA'
 import OptionButtons from '../../components/OptionButtons'
 import ComboBox from '../../components/ComboBox'
 import OPSearch from '../../components/OPSearch'
-import SearchSelect from '../../components/SearchSelect'
 import type { Referencia, Maquina, Persona, Opciones, Option, F006Registro } from '../../lib/types'
 
 const FILT_MS = 20 * 60 * 1000 // 20 minutos
@@ -43,8 +42,8 @@ type Producto = {
   finalizado?: boolean
   embalaje: Record<string, string>
   filtraciones: LocalFiltracion[]
-  operario_id?: number
-  empacador_id?: number
+  operario?: string    // buscar o escribir
+  empacador?: string   // buscar o escribir
   createdAt: number
 }
 type State = {
@@ -118,8 +117,8 @@ export default function F006Form({
               tapa_centrada: f.tapa_centrada ?? undefined,
               comentario: f.comentario ?? undefined,
             })),
-            operario_id: r.operario_id ?? undefined,
-            empacador_id: r.empacador_id ?? undefined,
+            operario: r.operario_nombre ?? (r.operario_id ? personas.find((p) => p.id === r.operario_id)?.nombre : undefined),
+            empacador: r.empacador_nombre ?? (r.empacador_id ? personas.find((p) => p.id === r.empacador_id)?.nombre : undefined),
             createdAt: Date.now(),
           }
           return { ...s, productos: [...s.productos, prod], seleccionadoId: r.id }
@@ -241,7 +240,7 @@ export default function F006Form({
     if (!p) return
     if (!p.guardado) await maybeGuardarCabecera(p)
     const r = await apiMutate('PUT', `/f006/registros/${prodId}/firmas`, {
-      operario_id: p.operario_id, empacador_id: p.empacador_id,
+      operario_nombre: p.operario ?? null, empacador_nombre: p.empacador ?? null,
     })
     // Al finalizar, el producto se retira de la lista de activos del turno
     // (ya quedó guardado; se consulta en "Ver registros F-006").
@@ -351,8 +350,8 @@ function ProductoDetalle({
   const faltantesEmb = opts ? opts.embalaje_f006.filter((o) => !prod.embalaje[o.value]) : []
 
   const firmasFaltan: string[] = []
-  if (!prod.operario_id) firmasFaltan.push('Operario')
-  if (!prod.empacador_id) firmasFaltan.push('Empacador')
+  if (!prod.operario || !prod.operario.trim()) firmasFaltan.push('Operario')
+  if (!prod.empacador || !prod.empacador.trim()) firmasFaltan.push('Empacador')
   const puedeFinalizar = faltantesEmb.length === 0 && firmasFaltan.length === 0
 
   return (
@@ -460,19 +459,19 @@ function ProductoDetalle({
               <input type="text" value={getUser()?.nombre ?? ''} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />
             </Field>
             <Field label="Operario(a)">
-              <SearchSelect
-                items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
-                value={prod.operario_id}
-                onChange={(id) => onFirmas({ operario_id: id })}
-                placeholder="Buscar operario…"
+              <ComboBox
+                options={personas.map((p) => p.nombre)}
+                value={prod.operario ?? ''}
+                onChange={(v) => onFirmas({ operario: v })}
+                placeholder="Buscar o escribir operario…"
               />
             </Field>
             <Field label="Empacador(a)">
-              <SearchSelect
-                items={personas.map((p) => ({ id: p.id, label: p.nombre }))}
-                value={prod.empacador_id}
-                onChange={(id) => onFirmas({ empacador_id: id })}
-                placeholder="Buscar empacador…"
+              <ComboBox
+                options={personas.map((p) => p.nombre)}
+                value={prod.empacador ?? ''}
+                onChange={(v) => onFirmas({ empacador: v })}
+                placeholder="Buscar o escribir empacador…"
               />
             </Field>
           </div>
@@ -501,18 +500,36 @@ function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: st
   const [tp, setTp] = useState('')
   const [tm, setTm] = useState('')
   const [cant, setCant] = useState('')
+  const [temp90, setTemp90] = useState('')  // solo aplica a Café caliente
 
   const montar = () => {
     if (!tp || !tm || cant === '') return
     onMontar(tp, tm, Number(cant))
-    setTp(''); setTm(''); setCant('')
+    setTp(''); setTm(''); setCant(''); setTemp90('')
   }
 
   return (
     <div className="filt" style={{ background: 'transparent' }}>
       <Field label="Tipo de prueba">
-        <OptionButtons options={opts.tipos_prueba_f006} value={tp} onChange={setTp} />
+        <OptionButtons
+          options={opts.tipos_prueba_f006}
+          value={tp}
+          onChange={(v) => { setTp(v); if (v !== 'cafe_caliente') setTemp90('') }}
+        />
       </Field>
+      {tp === 'cafe_caliente' && (
+        <>
+          <div className="check-row">
+            <span className="label">¿La temperatura es de 90°C?</span>
+            <OptionButtons options={[{ value: 'si', label: 'Sí' }, { value: 'no', label: 'No' }]} value={temp90} onChange={setTemp90} />
+          </div>
+          {temp90 === 'no' && (
+            <p className="tag-warn" style={{ marginTop: 0, background: 'var(--warn-bg)', padding: '8px 12px', borderRadius: 8, display: 'inline-block' }}>
+              ⚠ ¡Solicitar ajuste de temperatura!
+            </p>
+          )}
+        </>
+      )}
       <Field label="Tipo de papel">
         <OptionButtons options={opts.tipos_material_f006} value={tm} onChange={setTm} />
       </Field>

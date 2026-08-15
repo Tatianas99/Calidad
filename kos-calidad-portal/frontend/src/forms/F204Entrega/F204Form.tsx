@@ -5,7 +5,6 @@ import { uuid } from '../../lib/uuid'
 import { getUser } from '../../lib/auth'
 import { Field } from '../../components/Field'
 import OptionButtons from '../../components/OptionButtons'
-import SearchSelect from '../../components/SearchSelect'
 import ComboBox from '../../components/ComboBox'
 import OPSearch from '../../components/OPSearch'
 import type { Referencia, Maquina, Persona, F204Registro } from '../../lib/types'
@@ -24,7 +23,7 @@ type Entrada = {
   marca?: string
   cantidad_clase_b?: string
   verificacion?: string
-  entregado_por_id?: number
+  entregado_por?: string   // buscar o escribir
   observaciones?: string
   createdAt: number
 }
@@ -67,7 +66,7 @@ export default function F204Form({
             marca: r.marca ?? undefined,
             cantidad_clase_b: r.cantidad_clase_b != null ? String(r.cantidad_clase_b) : undefined,
             verificacion: r.verificacion_desperdicio ?? undefined,
-            entregado_por_id: r.entregado_por_id ?? undefined,
+            entregado_por: r.entregado_por_nombre ?? (r.entregado_por_id ? operarios.find((p) => p.id === r.entregado_por_id)?.nombre : undefined),
             observaciones: r.observaciones ?? undefined, createdAt: Date.now(),
           }
           return { ...s, entradas: [...s.entradas, nueva], seleccionadoId: nueva.localId }
@@ -106,7 +105,7 @@ export default function F204Form({
     if (!e.turno) f.push('Turno')
     if (!e.maquina || !e.maquina.trim()) f.push('Máquina')
     if (!e.referencia_texto || !e.referencia_texto.trim()) f.push('Referencia')
-    if (!e.entregado_por_id) f.push('Entregado por')
+    if (!e.entregado_por || !e.entregado_por.trim()) f.push('Entregado por')
     return f
   }
 
@@ -117,7 +116,7 @@ export default function F204Form({
       referencia_texto: e.referencia_texto ?? null, marca: e.marca ?? null,
       cantidad_clase_b: e.cantidad_clase_b != null && e.cantidad_clase_b !== '' ? Number(e.cantidad_clase_b) : null,
       verificacion_desperdicio: e.verificacion ?? null,
-      entregado_por_id: e.entregado_por_id ?? null,
+      entregado_por_nombre: e.entregado_por ?? null,
       observaciones: e.observaciones ?? null,
       ...(admin ? { fecha: e.fecha || hoy() } : {}),
     }
@@ -218,11 +217,11 @@ export default function F204Form({
 
               <div className="row">
                 <Field label="Entregado por">
-                  <SearchSelect
-                    items={operarios.map((p) => ({ id: p.id, label: p.nombre }))}
-                    value={selected.entregado_por_id}
-                    onChange={(id) => upd({ entregado_por_id: id })}
-                    placeholder="Buscar operario…"
+                  <ComboBox
+                    options={operarios.map((p) => p.nombre)}
+                    value={selected.entregado_por ?? ''}
+                    onChange={(v) => upd({ entregado_por: v })}
+                    placeholder="Buscar o escribir operario…"
                   />
                 </Field>
                 <Field label="Recibido por" hint="usuario en sesión">

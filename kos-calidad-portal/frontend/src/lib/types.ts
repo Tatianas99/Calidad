@@ -50,7 +50,9 @@ export type F006Registro = {
   auxiliar_id?: number | null
   auxiliar_nombre?: string | null
   operario_id?: number | null
+  operario_nombre?: string | null
   empacador_id?: number | null
+  empacador_nombre?: string | null
   creado_en: string
   embalaje: { item: string; resultado: string }[]
   filtraciones: Filtracion[]

@@ -188,7 +188,9 @@ def guardar_firmas(
     reg = _get_registro(registro_id, db)
     reg.auxiliar_id = data.auxiliar_id
     reg.operario_id = data.operario_id
+    reg.operario_nombre = data.operario_nombre
     reg.empacador_id = data.empacador_id
+    reg.empacador_nombre = data.empacador_nombre
     db.commit()
     db.refresh(reg)
     return reg

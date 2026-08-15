@@ -114,8 +114,10 @@ class F006Registro(Base):
     turno: Mapped[int] = mapped_column(Integer, nullable=False)
     auxiliar_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
     auxiliar_nombre: Mapped[Optional[str]] = mapped_column(String(120))  # auto = usuario en turno
-    operario_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
-    empacador_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))
+    operario_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))  # legacy
+    operario_nombre: Mapped[Optional[str]] = mapped_column(String(120))  # buscar o escribir
+    empacador_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))  # legacy
+    empacador_nombre: Mapped[Optional[str]] = mapped_column(String(120))  # buscar o escribir
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
 
     referencia: Mapped[Optional["Referencia"]] = relationship()

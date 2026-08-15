@@ -50,7 +50,7 @@ def crear_registro(
         cantidad_clase_b=data.cantidad_clase_b,
         verificacion_desperdicio=data.verificacion_desperdicio,
         entregado_por_id=data.entregado_por_id,
-        entregado_por_nombre=_nombre_persona(db, data.entregado_por_id),
+        entregado_por_nombre=data.entregado_por_nombre or _nombre_persona(db, data.entregado_por_id),
         recibido_por_id=user.id,
         recibido_por_nombre=user.nombre,
         observaciones=data.observaciones,
@@ -105,7 +105,7 @@ def editar_registro(
     reg.cantidad_clase_b = data.cantidad_clase_b
     reg.verificacion_desperdicio = data.verificacion_desperdicio
     reg.entregado_por_id = data.entregado_por_id
-    reg.entregado_por_nombre = _nombre_persona(db, data.entregado_por_id)
+    reg.entregado_por_nombre = data.entregado_por_nombre or _nombre_persona(db, data.entregado_por_id)
     reg.observaciones = data.observaciones
     db.commit()
     db.refresh(reg)

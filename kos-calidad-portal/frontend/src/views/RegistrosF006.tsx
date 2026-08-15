@@ -92,7 +92,7 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
   const renderDetail = (r: F006Registro) => (
     <div className="detalle">
       <div style={{ gridColumn: '1 / -1' }} className="muted">
-        Operario: <b>{personaName(r.operario_id)}</b> · Empacador: <b>{personaName(r.empacador_id)}</b> · Registrado: {hhmm(r.creado_en)}
+        Operario: <b>{r.operario_nombre || personaName(r.operario_id)}</b> · Empacador: <b>{r.empacador_nombre || personaName(r.empacador_id)}</b> · Registrado: {hhmm(r.creado_en)}
       </div>
       <div style={{ gridColumn: '1 / -1' }}>
         <h4>Mediciones producto (mm)</h4>

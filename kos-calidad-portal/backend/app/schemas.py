@@ -128,7 +128,9 @@ class FiltracionResultado(BaseModel):
 class FirmasUpdate(BaseModel):
     auxiliar_id: Optional[int] = None
     operario_id: Optional[int] = None
+    operario_nombre: Optional[str] = None
     empacador_id: Optional[int] = None
+    empacador_nombre: Optional[str] = None
 
 
 class EmbalajeOut(BaseModel):
@@ -166,7 +168,9 @@ class F006RegistroOut(Mediciones):
     auxiliar_id: Optional[int] = None
     auxiliar_nombre: Optional[str] = None
     operario_id: Optional[int] = None
+    operario_nombre: Optional[str] = None
     empacador_id: Optional[int] = None
+    empacador_nombre: Optional[str] = None
     creado_en: datetime
     embalaje: List[EmbalajeOut] = []
     filtraciones: List[FiltracionOut] = []
@@ -274,6 +278,7 @@ class F204RegistroCreate(BaseModel):
     cantidad_clase_b: Optional[int] = Field(default=None, ge=0)
     verificacion_desperdicio: Optional[str] = None  # C|NC|NA
     entregado_por_id: Optional[int] = None
+    entregado_por_nombre: Optional[str] = None  # buscar o escribir
     observaciones: Optional[str] = None
 
 
