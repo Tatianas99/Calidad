@@ -8,6 +8,7 @@ import ChecklistCNCNA from '../../components/ChecklistCNCNA'
 import OptionButtons from '../../components/OptionButtons'
 import ComboBox from '../../components/ComboBox'
 import OPSearch from '../../components/OPSearch'
+import { matchKeywords } from '../../lib/fuzzy'
 import type { Referencia, Maquina, Persona, Opciones, Option, F006Registro } from '../../lib/types'
 
 const FILT_MS = 20 * 60 * 1000 // 20 minutos
@@ -70,62 +71,72 @@ export default function F006Form({
   const [opts, setOpts] = useState<Opciones | null>(null)
   const [msg, setMsg] = useState('')
   const [now, setNow] = useState(Date.now())
+  const [guardados, setGuardados] = useState<F006Registro[]>([])
+  const [verGuardados, setVerGuardados] = useState(false)
+  const [busqGuardados, setBusqGuardados] = useState('')
 
   const [st, setSt] = useDraft<State>('draft_f006_v3', { productos: [] })
   const stRef = useRef(st)
   stRef.current = st
   const embTimers = useRef<Record<string, number>>({})
 
+  const cargarGuardados = () =>
+    apiGet<F006Registro[]>(`/f006/registros?fecha=${hoy()}`).then(setGuardados).catch(() => {})
+
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
     apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
     apiGet<Persona[]>('/catalogos/personas').then(setPersonas).catch(() => {})
     apiGet<Opciones>('/catalogos/opciones').then(setOpts).catch(() => {})
+    cargarGuardados()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Edición pedida desde "Ver registros F-006": recarga el registro como producto
   // editable del turno (reutiliza los mismos PUT de cabecera/embalaje/firmas).
+  const prodDeRegistro = (r: F006Registro): Producto => ({
+    registroId: r.id,
+    orden_produccion: r.orden_produccion ?? undefined,
+    referencia_texto: r.referencia_texto ?? (r.referencia_id ? refLabel(r.referencia_id) : undefined),
+    marca: r.marca ?? undefined,
+    altura_vaso: r.altura_vaso ?? undefined,
+    diametro_superior: r.diametro_superior ?? undefined,
+    diametro_inferior: r.diametro_inferior ?? undefined,
+    grueso_rim: r.grueso_rim ?? undefined,
+    fecha: r.fecha,
+    maquina: r.maquina_texto ?? (r.maquina_id ? maqs.find((m) => m.id === r.maquina_id)?.nombre : undefined),
+    turno: r.turno,
+    guardado: true,
+    embalaje: Object.fromEntries(r.embalaje.map((e) => [e.item, e.resultado])),
+    filtraciones: r.filtraciones.map((f) => ({
+      id: f.id,
+      tipo_prueba: f.tipo_prueba,
+      tipo_material: f.tipo_material,
+      cantidad_muestra: f.cantidad_muestra,
+      temp_90: f.temp_90 ?? undefined,
+      montadaEnMs: new Date(f.hora_montaje).getTime(),
+      estado: f.estado,
+      cantidad_cumple: f.cantidad_cumple ?? undefined,
+      cantidad_nocumple: f.cantidad_nocumple ?? undefined,
+      goteo_vaso_tapa: f.goteo_vaso_tapa ?? undefined,
+      tapa_centrada: f.tapa_centrada ?? undefined,
+      comentario: f.comentario ?? undefined,
+    })),
+    operario: r.operario_nombre ?? (r.operario_id ? personas.find((p) => p.id === r.operario_id)?.nombre : undefined),
+    empacador: r.empacador_nombre ?? (r.empacador_id ? personas.find((p) => p.id === r.empacador_id)?.nombre : undefined),
+    createdAt: Date.now(),
+  })
+
+  // Reabre un registro guardado como producto editable del turno.
+  const abrirRegistro = (r: F006Registro) =>
+    setSt((s) => (s.productos.some((p) => p.registroId === r.id)
+      ? { ...s, seleccionadoId: r.id }
+      : { ...s, productos: [...s.productos, prodDeRegistro(r)], seleccionadoId: r.id }))
+
   useEffect(() => {
     if (!editarId) return
     apiGet<F006Registro>(`/f006/registros/${editarId}`)
-      .then((r) => {
-        setSt((s) => {
-          if (s.productos.some((p) => p.registroId === r.id)) return { ...s, seleccionadoId: r.id }
-          const prod: Producto = {
-            registroId: r.id,
-            orden_produccion: r.orden_produccion ?? undefined,
-            referencia_texto: r.referencia_texto ?? (r.referencia_id ? refLabel(r.referencia_id) : undefined),
-            marca: r.marca ?? undefined,
-            altura_vaso: r.altura_vaso ?? undefined,
-            diametro_superior: r.diametro_superior ?? undefined,
-            diametro_inferior: r.diametro_inferior ?? undefined,
-            grueso_rim: r.grueso_rim ?? undefined,
-            fecha: r.fecha,
-            maquina: r.maquina_texto ?? (r.maquina_id ? maqs.find((m) => m.id === r.maquina_id)?.nombre : undefined),
-            turno: r.turno,
-            guardado: true,
-            embalaje: Object.fromEntries(r.embalaje.map((e) => [e.item, e.resultado])),
-            filtraciones: r.filtraciones.map((f) => ({
-              id: f.id,
-              tipo_prueba: f.tipo_prueba,
-              tipo_material: f.tipo_material,
-              cantidad_muestra: f.cantidad_muestra,
-              temp_90: f.temp_90 ?? undefined,
-              montadaEnMs: new Date(f.hora_montaje).getTime(),
-              estado: f.estado,
-              cantidad_cumple: f.cantidad_cumple ?? undefined,
-              cantidad_nocumple: f.cantidad_nocumple ?? undefined,
-              goteo_vaso_tapa: f.goteo_vaso_tapa ?? undefined,
-              tapa_centrada: f.tapa_centrada ?? undefined,
-              comentario: f.comentario ?? undefined,
-            })),
-            operario: r.operario_nombre ?? (r.operario_id ? personas.find((p) => p.id === r.operario_id)?.nombre : undefined),
-            empacador: r.empacador_nombre ?? (r.empacador_id ? personas.find((p) => p.id === r.empacador_id)?.nombre : undefined),
-            createdAt: Date.now(),
-          }
-          return { ...s, productos: [...s.productos, prod], seleccionadoId: r.id }
-        })
-      })
+      .then((r) => abrirRegistro(r))
       .catch(() => {})
       .finally(() => onEditarConsumido?.())
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -251,8 +262,14 @@ export default function F006Form({
       const seleccionadoId = s.seleccionadoId === prodId ? productos[0]?.registroId : s.seleccionadoId
       return { ...s, productos, seleccionadoId }
     })
+    cargarGuardados()
     flash(r.ok ? 'Registro finalizado y archivado ✔' : 'Finalizado (pendiente de sincronizar)')
   }
+
+  const labelReg = (r: F006Registro) =>
+    (r.referencia_texto || (r.referencia_id ? refLabel(r.referencia_id) : '') || 'Producto') + (r.marca ? ` ${r.marca}` : '')
+  const guardadosFiltrados = guardados.filter((r) =>
+    matchKeywords(busqGuardados, `${labelReg(r)} ${r.maquina_texto ?? ''}`))
 
   return (
     <div>
@@ -297,6 +314,32 @@ export default function F006Form({
               )
             })}
           </div>
+
+          <div className="saved-div" onClick={() => { const nv = !verGuardados; setVerGuardados(nv); if (nv) cargarGuardados() }}>
+            <span>{verGuardados ? '▾' : '▸'} Guardados hoy ({guardados.length})</span>
+            <span className="saved-line" />
+          </div>
+          {verGuardados && (
+            <div className="saved-list">
+              <input
+                className="filt-search" style={{ marginBottom: 6 }}
+                placeholder="Buscar por palabras clave…"
+                value={busqGuardados}
+                onChange={(e) => setBusqGuardados(e.target.value)}
+              />
+              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Aún no hay productos guardados hoy.</p>}
+              {guardados.length > 0 && guardadosFiltrados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin coincidencias.</p>}
+              {guardadosFiltrados.map((r) => (
+                <div key={r.id} className="saved-item">
+                  <div>
+                    <strong>{labelReg(r)}</strong>
+                    <div className="muted">{r.maquina_texto || 'Sin máquina'}{r.turno ? ` · T${r.turno}` : ''}</div>
+                  </div>
+                  <button className="btn btn-ghost pill-btn" onClick={() => abrirRegistro(r)}>Abrir</button>
+                </div>
+              ))}
+            </div>
+          )}
         </aside>
 
         <section>
