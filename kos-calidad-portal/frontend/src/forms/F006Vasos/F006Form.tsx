@@ -71,25 +71,18 @@ export default function F006Form({
   const [opts, setOpts] = useState<Opciones | null>(null)
   const [msg, setMsg] = useState('')
   const [now, setNow] = useState(Date.now())
-  const [guardados, setGuardados] = useState<F006Registro[]>([])
-  const [verGuardados, setVerGuardados] = useState(false)
-  const [busqGuardados, setBusqGuardados] = useState('')
+  const [busqProductos, setBusqProductos] = useState('')
 
   const [st, setSt] = useDraft<State>('draft_f006_v3', { productos: [] })
   const stRef = useRef(st)
   stRef.current = st
   const embTimers = useRef<Record<string, number>>({})
 
-  const cargarGuardados = () =>
-    apiGet<F006Registro[]>(`/f006/registros?fecha=${hoy()}`).then(setGuardados).catch(() => {})
-
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
     apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
     apiGet<Persona[]>('/catalogos/personas').then(setPersonas).catch(() => {})
     apiGet<Opciones>('/catalogos/opciones').then(setOpts).catch(() => {})
-    cargarGuardados()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Edición pedida desde "Ver registros F-006": recarga el registro como producto
@@ -262,14 +255,12 @@ export default function F006Form({
       const seleccionadoId = s.seleccionadoId === prodId ? productos[0]?.registroId : s.seleccionadoId
       return { ...s, productos, seleccionadoId }
     })
-    cargarGuardados()
     flash(r.ok ? 'Registro finalizado y archivado ✔' : 'Finalizado (pendiente de sincronizar)')
   }
 
-  const labelReg = (r: F006Registro) =>
-    (r.referencia_texto || (r.referencia_id ? refLabel(r.referencia_id) : '') || 'Producto') + (r.marca ? ` ${r.marca}` : '')
-  const guardadosFiltrados = guardados.filter((r) =>
-    matchKeywords(busqGuardados, `${labelReg(r)} ${r.maquina_texto ?? ''}`))
+  // Productos del turno filtrados por el buscador (referencia / marca / máquina).
+  const productosFiltrados = st.productos.filter((p) =>
+    matchKeywords(busqProductos, `${prodLabel(p)} ${p.maquina ?? ''}`))
 
   return (
     <div>
@@ -285,9 +276,18 @@ export default function F006Form({
         <aside className="side">
           <button className="add" onClick={agregarProducto}>AGREGAR +</button>
           <h4>Productos del turno ({st.productos.length})</h4>
+          {st.productos.length > 0 && (
+            <input
+              className="filt-search" style={{ marginBottom: 6 }}
+              placeholder="Buscar por palabras clave…"
+              value={busqProductos}
+              onChange={(e) => setBusqProductos(e.target.value)}
+            />
+          )}
           <div className="prod-list">
             {st.productos.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Aún no hay productos.</p>}
-            {st.productos.map((p) => {
+            {st.productos.length > 0 && productosFiltrados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin coincidencias.</p>}
+            {productosFiltrados.map((p) => {
               const enProceso = p.filtraciones.filter((f) => f.estado === 'en_proceso')
               const listas = enProceso.filter((f) => now - f.montadaEnMs >= FILT_MS)
               return (
@@ -314,32 +314,6 @@ export default function F006Form({
               )
             })}
           </div>
-
-          <div className="saved-div" onClick={() => { const nv = !verGuardados; setVerGuardados(nv); if (nv) cargarGuardados() }}>
-            <span>{verGuardados ? '▾' : '▸'} Guardados hoy ({guardados.length})</span>
-            <span className="saved-line" />
-          </div>
-          {verGuardados && (
-            <div className="saved-list">
-              <input
-                className="filt-search" style={{ marginBottom: 6 }}
-                placeholder="Buscar por palabras clave…"
-                value={busqGuardados}
-                onChange={(e) => setBusqGuardados(e.target.value)}
-              />
-              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Aún no hay productos guardados hoy.</p>}
-              {guardados.length > 0 && guardadosFiltrados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin coincidencias.</p>}
-              {guardadosFiltrados.map((r) => (
-                <div key={r.id} className="saved-item">
-                  <div>
-                    <strong>{labelReg(r)}</strong>
-                    <div className="muted">{r.maquina_texto || 'Sin máquina'}{r.turno ? ` · T${r.turno}` : ''}</div>
-                  </div>
-                  <button className="btn btn-ghost pill-btn" onClick={() => abrirRegistro(r)}>Abrir</button>
-                </div>
-              ))}
-            </div>
-          )}
         </aside>
 
         <section>
