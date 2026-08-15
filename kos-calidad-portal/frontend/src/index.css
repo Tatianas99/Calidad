@@ -184,6 +184,9 @@ textarea { min-height: 70px; resize: vertical; }
   border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: var(--surface); }
 .tag-ok { color: var(--ok); font-weight: 700; }
 .tag-bad { color: var(--bad); font-weight: 700; }
+/* Pregunta de temperatura (Café caliente): resaltada porque no aparece siempre. */
+.temp-q { background: var(--bad-bg); border: 1px solid var(--bad); border-left: 4px solid var(--bad); border-radius: 8px; padding: 6px 12px; margin: 6px 0 10px; }
+.temp-q .label { color: var(--bad); font-weight: 800; }
 .muted { color: var(--muted); }
 .center { text-align: center; }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);

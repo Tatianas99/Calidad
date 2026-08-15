@@ -521,17 +521,15 @@ function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: st
         />
       </Field>
       {tp === 'cafe_caliente' && (
-        <>
-          <div className="check-row">
-            <span className="label">¿La temperatura es de 90°C?</span>
+        <div className="temp-q">
+          <div className="check-row" style={{ borderBottom: 'none', padding: '2px 0' }}>
+            <span className="label">🌡️ ¿La temperatura es de 90°C?</span>
             <OptionButtons options={[{ value: 'si', label: 'Sí' }, { value: 'no', label: 'No' }]} value={temp90} onChange={setTemp90} />
           </div>
           {temp90 === 'no' && (
-            <p className="tag-warn" style={{ marginTop: 0, background: 'var(--warn-bg)', padding: '8px 12px', borderRadius: 8, display: 'inline-block' }}>
-              ⚠ ¡Solicitar ajuste de temperatura!
-            </p>
+            <p className="tag-bad" style={{ margin: '4px 0 0' }}>⚠ ¡Solicitar ajuste de temperatura!</p>
           )}
-        </>
+        </div>
       )}
       <Field label="Tipo de papel">
         <OptionButtons options={opts.tipos_material_f006} value={tm} onChange={setTm} />
