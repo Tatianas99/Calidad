@@ -187,6 +187,9 @@ textarea { min-height: 70px; resize: vertical; }
 /* Pregunta de temperatura (Café caliente): resaltada porque no aparece siempre. */
 .temp-q { background: var(--bad-bg); border: 1px solid var(--bad); border-left: 4px solid var(--bad); border-radius: 8px; padding: 6px 12px; margin: 6px 0 10px; }
 .temp-q .label { color: var(--bad); font-weight: 800; }
+/* Título contraíble (p. ej. "Productos del turno"). */
+.side-toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
+.side-toggle .side-caret { color: var(--muted); font-size: .85em; }
 .muted { color: var(--muted); }
 .center { text-align: center; }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);

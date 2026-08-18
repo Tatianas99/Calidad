@@ -72,6 +72,8 @@ export default function F006Form({
   const [msg, setMsg] = useState('')
   const [now, setNow] = useState(Date.now())
   const [busqProductos, setBusqProductos] = useState('')
+  // La lista se puede contraer (en móvil arranca contraída para no saturar).
+  const [verProductos, setVerProductos] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 820 : true))
 
   const [st, setSt] = useDraft<State>('draft_f006_v3', { productos: [] })
   const stRef = useRef(st)
@@ -275,7 +277,10 @@ export default function F006Form({
       <div className="f006-layout">
         <aside className="side">
           <button className="add" onClick={agregarProducto}>AGREGAR +</button>
-          <h4>Productos del turno ({st.productos.length})</h4>
+          <h4 className="side-toggle" onClick={() => setVerProductos((v) => !v)}>
+            <span className="side-caret">{verProductos ? '▾' : '▸'}</span> Productos del turno ({st.productos.length})
+          </h4>
+          {verProductos && (<>
           {st.productos.length > 0 && (
             <input
               className="filt-search" style={{ marginBottom: 6 }}
@@ -314,6 +319,7 @@ export default function F006Form({
               )
             })}
           </div>
+          </>)}
         </aside>
 
         <section>
