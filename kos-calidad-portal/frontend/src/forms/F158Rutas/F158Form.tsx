@@ -88,10 +88,30 @@ function campoCompleto(c: F158Campo, e: Entrada): boolean {
   return !!(e.vals[c.key] || '').trim()  // texto / cncna
 }
 
+// Pregunta filtro del proceso (p. ej. "¿Están trabajando?" en KosExpress). La
+// primera opción ("Sí") continúa el formato; con cualquier otra ("No") el resto
+// del checklist no aplica y solo quedan las observaciones.
+const gateDe = (proceso: F158Proceso) => proceso.campos.find((c) => c.gate)
+
+function gateCerrado(proceso: F158Proceso, e: Entrada): boolean {
+  const g = gateDe(proceso)
+  if (!g) return false
+  const v = e.vals[g.key]
+  return !!v && v !== (g.opciones?.[0] ?? 'Sí')
+}
+
+// Campos que se muestran y se guardan: todos, o solo la pregunta filtro si se
+// respondió que no están trabajando.
+function camposVisibles(proceso: F158Proceso, e: Entrada): F158Campo[] {
+  const g = gateDe(proceso)
+  return g && gateCerrado(proceso, e) ? [g] : proceso.campos
+}
+
 function faltantesDe(proceso: F158Proceso, e: Entrada): string[] {
   const f: string[] = []
-  if (proceso.maquinas.length > 0 && !e.maquina) f.push('Máquina')
-  for (const c of proceso.campos) if (!campoCompleto(c, e)) f.push(c.label)
+  const cerrado = gateCerrado(proceso, e)
+  if (!cerrado && proceso.maquinas.length > 0 && !e.maquina) f.push('Máquina')
+  for (const c of camposVisibles(proceso, e)) if (!campoCompleto(c, e)) f.push(c.label)
   return f
 }
 
@@ -238,7 +258,7 @@ export default function F158Form({
     const faltan = faltantesDe(proc, e)
     if (faltan.length) { flash(`Faltan ${faltan.length} campo(s) obligatorio(s)`); return }
 
-    const items = proc.campos.map((c) => buildItem(c, e, refs))
+    const items = camposVisibles(proc, e).map((c) => buildItem(c, e, refs))
     const body = { proceso: e.proceso, maquina: e.maquina ?? null, observaciones: e.observaciones ?? null, items, ...(admin ? { fecha: e.fecha || hoy() } : {}) }
 
     let ok = false
@@ -438,6 +458,8 @@ function EntradaDetalle({
   }
 
   const faltan = faltantesDe(proceso, entrada)
+  const cerrado = gateCerrado(proceso, entrada)
+  const campos = camposVisibles(proceso, entrada)
 
   return (
     <div>
@@ -453,7 +475,7 @@ function EntradaDetalle({
             <input type="date" value={entrada.fecha ?? ''} onChange={(e) => upd({ fecha: e.target.value })} />
           </Field>
         )}
-        {proceso.maquinas.length > 0 && (
+        {!cerrado && proceso.maquinas.length > 0 && (
           <div className="maq-box">
             <div className="maq-title">MÁQUINAS</div>
             {proceso.maquinas.length > 8 ? (
@@ -475,7 +497,7 @@ function EntradaDetalle({
 
         <h3 style={{ marginTop: 16 }}>Checklist <span className="hint">(todos los campos son obligatorios)</span></h3>
 
-        {proceso.campos.map((c) => (
+        {campos.map((c) => (
           <CampoField
             key={c.key}
             campo={c}
@@ -495,8 +517,14 @@ function EntradaDetalle({
           />
         ))}
 
+        {cerrado && (
+          <p className="tag-warn">
+            ⚠ No están trabajando: el resto del checklist no aplica. Escribe las observaciones y guarda el recorrido.
+          </p>
+        )}
+
         <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0' }} />
-        <Field label="Observaciones / comentarios">
+        <Field label="Observaciones / comentarios" hint={cerrado ? 'indica por qué no están trabajando' : undefined}>
           <textarea value={entrada.observaciones ?? ''} onChange={(ev) => upd({ observaciones: ev.target.value })} />
         </Field>
 

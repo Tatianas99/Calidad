@@ -81,6 +81,7 @@ export type F158Campo = {
   tipo: F158Tipo
   opciones?: string[]
   otro?: boolean
+  gate?: boolean          // pregunta filtro: si no se responde la 1ª opción, el resto no aplica
 }
 export type F158Proceso = {
   key: string

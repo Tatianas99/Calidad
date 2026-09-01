@@ -8,6 +8,10 @@ renderiza dinámicamente el checklist de cada proceso. Cada campo tiene un `tipo
     opciones    -> selección única de una lista (con `otro=True` habilita "Otro ¿Cuál?")
     referencia  -> buscador de referencia (PQRS) + campo de marca
 
+Un campo de tipo `opciones` puede marcarse con `gate=True` (pregunta filtro). Si se
+responde con una opción distinta a la primera (p. ej. "No"), el frontend oculta el
+resto del checklist y solo pide las observaciones para poder guardar.
+
 Los ítems se guardan de forma genérica (clave/valor) en f158_item, así que agregar,
 quitar o reordenar campos aquí NO requiere cambios de base de datos.
 """
@@ -55,6 +59,13 @@ def _calibre_asa():
     return _o("calibre_asa", "Calibre asa", CALIBRES + ["N/A"], otro=True)
 
 
+def _gate(key, label, opciones=("Sí", "No")):
+    """Pregunta filtro Sí/No. La PRIMERA opción es la que continúa el formato;
+    con cualquier otra el recorrido se cierra con solo esta respuesta y las
+    observaciones (ver `gate` en el docstring del módulo)."""
+    return {"key": key, "label": label, "tipo": "opciones", "opciones": list(opciones), "gate": True}
+
+
 # ------------------------------- Procesos ---------------------------------- #
 PROCESOS_F158 = [
     {
@@ -93,6 +104,7 @@ PROCESOS_F158 = [
         "label": "KosExpress",
         "maquinas": [],
         "campos": [
+            _gate("trabajando", "¿Están trabajando?"),
             _t("op", "Orden de producción"),
             _ref(),
             _calibre(),
