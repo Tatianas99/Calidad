@@ -74,6 +74,9 @@ export default function F006Form({
   const [busqProductos, setBusqProductos] = useState('')
   // La lista se puede contraer (en móvil arranca contraída para no saturar).
   const [verProductos, setVerProductos] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 820 : true))
+  // Pestaña con la que abre el detalle: al elegir un producto de la lista, va
+  // directo a "Pruebas de filtración"; al crear uno nuevo, a "Producto y embalaje".
+  const [pestanaInicial, setPestanaInicial] = useState<Tab>('pe')
 
   const [st, setSt] = useDraft<State>('draft_f006_v3', { productos: [] })
   const stRef = useRef(st)
@@ -116,7 +119,7 @@ export default function F006Form({
       goteo_vaso_tapa: f.goteo_vaso_tapa ?? undefined,
       tapa_centrada: f.tapa_centrada ?? undefined,
       comentario: f.comentario ?? undefined,
-    })),
+    })).reverse(),  // más recientes arriba
     operario: r.operario_nombre ?? (r.operario_id ? personas.find((p) => p.id === r.operario_id)?.nombre : undefined),
     empacador: r.empacador_nombre ?? (r.empacador_id ? personas.find((p) => p.id === r.empacador_id)?.nombre : undefined),
     createdAt: Date.now(),
@@ -164,7 +167,15 @@ export default function F006Form({
     const nuevo: Producto = {
       registroId: uuid(), fecha: hoy(), guardado: false, embalaje: {}, filtraciones: [], createdAt: Date.now(),
     }
+    setPestanaInicial('pe')
     setSt((s) => ({ ...s, productos: [...s.productos, nuevo], seleccionadoId: nuevo.registroId }))
+  }
+
+  // Elegir un producto de la lista: abre en "Pruebas de filtración" y contrae la lista.
+  function seleccionarProducto(id: string) {
+    setPestanaInicial('filt')
+    setVerProductos(false)
+    setSt((s) => ({ ...s, seleccionadoId: id }))
   }
 
   function quitarProducto(id: string) {
@@ -222,7 +233,7 @@ export default function F006Form({
       id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant, temp_90: temp90 || undefined,
       montadaEnMs: Date.now(), estado: 'en_proceso',
     }
-    mapProd(prodId, (p) => ({ ...p, filtraciones: [...p.filtraciones, nueva] }))
+    mapProd(prodId, (p) => ({ ...p, filtraciones: [nueva, ...p.filtraciones] }))
     const r = await apiMutate('POST', `/f006/registros/${prodId}/filtracion`, {
       id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant, temp_90: temp90 || null,
     })
@@ -299,7 +310,7 @@ export default function F006Form({
                 <button
                   key={p.registroId}
                   className={'prod-item' + (p.registroId === st.seleccionadoId ? ' sel' : '')}
-                  onClick={() => setSt((s) => ({ ...s, seleccionadoId: p.registroId }))}
+                  onClick={() => seleccionarProducto(p.registroId)}
                 >
                   <span className="pt">{prodLabel(p)}</span>
                   <span className="pm">
@@ -332,6 +343,7 @@ export default function F006Form({
             <ProductoDetalle
               key={selected.registroId}
               prod={selected}
+              initialTab={pestanaInicial}
               maqs={maqs}
               personas={personas}
               opts={opts}
@@ -354,9 +366,10 @@ export default function F006Form({
 }
 
 function ProductoDetalle({
-  prod, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onResultado, onFirmas, onFinalizar,
+  prod, initialTab, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onResultado, onFirmas, onFinalizar,
 }: {
   prod: Producto
+  initialTab: Tab
   maqs: Maquina[]
   personas: Persona[]
   opts: Opciones | null
@@ -369,7 +382,7 @@ function ProductoDetalle({
   onFirmas: (patch: Partial<Producto>) => void
   onFinalizar: () => void
 }) {
-  const [tab, setTab] = useState<Tab>('pe')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const admin = getUser()?.rol === 'admin'
   const cabeceraCompleta = !!(prod.referencia_texto && prod.referencia_texto.trim() && prod.maquina && prod.turno)
   const faltantesEmb = opts ? opts.embalaje_f006.filter((o) => !prod.embalaje[o.value]) : []
