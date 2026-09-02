@@ -200,6 +200,17 @@ PROCESOS_F158 = [
             _c("identificacion_caja", "Identificación caja"),
         ],
     },
+    {
+        "key": "banda_transportadora",
+        "label": "Banda Transportadora",
+        "maquinas": [],
+        # OP (la referencia y la marca se autocompletan con la OP) + observaciones
+        # y evidencia fotográfica (comunes a todos los procesos).
+        "campos": [
+            _t("op", "Orden de producción"),
+            _ref(),
+        ],
+    },
 ]
 
 PROCESOS_KEYS = {p["key"] for p in PROCESOS_F158}
