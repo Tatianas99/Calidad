@@ -519,12 +519,12 @@ function EntradaDetalle({
 
         {cerrado && (
           <p className="tag-warn">
-            ⚠ No están trabajando: el resto del checklist no aplica. Escribe las observaciones y guarda el recorrido.
+            ⚠ El proceso no está trabajando: el resto del checklist no aplica. Escribe las observaciones y guarda el recorrido.
           </p>
         )}
 
         <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0' }} />
-        <Field label="Observaciones / comentarios" hint={cerrado ? 'indica por qué no están trabajando' : undefined}>
+        <Field label="Observaciones / comentarios" hint={cerrado ? 'indica por qué el proceso no está trabajando' : undefined}>
           <textarea value={entrada.observaciones ?? ''} onChange={(ev) => upd({ observaciones: ev.target.value })} />
         </Field>
 

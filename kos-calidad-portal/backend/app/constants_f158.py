@@ -104,7 +104,7 @@ PROCESOS_F158 = [
         "label": "KosExpress",
         "maquinas": [],
         "campos": [
-            _gate("trabajando", "¿Están trabajando?"),
+            _gate("trabajando", "¿El proceso está trabajando?"),
             _t("op", "Orden de producción"),
             _ref(),
             _calibre(),
