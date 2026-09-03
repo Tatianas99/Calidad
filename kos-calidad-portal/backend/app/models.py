@@ -131,7 +131,8 @@ class F006Registro(Base):
         back_populates="registro", cascade="all, delete-orphan"
     )
     filtraciones: Mapped[List["F006Filtracion"]] = relationship(
-        back_populates="registro", cascade="all, delete-orphan"
+        back_populates="registro", cascade="all, delete-orphan",
+        order_by="F006Filtracion.hora_montaje",  # cronológico (primera prueba primero)
     )
 
 
