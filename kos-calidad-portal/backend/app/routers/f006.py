@@ -9,6 +9,7 @@ from ..db import get_db
 from .. import models, schemas
 from ..auth import require_admin, get_current_user
 from ..timeutil import now_co, fecha_fields
+from .turnos import cargar_horarios, turno_de
 
 router = APIRouter(prefix="/f006", tags=["F-006 Vasos"])
 
@@ -32,6 +33,8 @@ def crear_registro(
         if existing:
             return existing
     f, _ = fecha_fields(user.rol == "admin", data.fecha)
+    # Turno automático según la hora de ingreso y los horarios de Configuración.
+    turno = turno_de(now_co(), cargar_horarios(db))
     kwargs = dict(
         orden_produccion=data.orden_produccion,
         referencia_id=data.referencia_id,
@@ -47,7 +50,7 @@ def crear_registro(
         # Auxiliar de calidad = persona en turno (usuario en sesión), automático.
         auxiliar_nombre=user.nombre,
         registrado_por_id=user.id,
-        turno=data.turno,
+        turno=turno,
     )
     if data.id:
         kwargs["id"] = data.id
@@ -97,7 +100,9 @@ def actualizar_cabecera(
     if data.fecha and user.rol == "admin":
         reg.fecha = data.fecha
     reg.maquina_id = data.maquina_id
-    reg.turno = data.turno
+    # El turno es automático (por la hora de creación); no se pisa en la edición.
+    if data.turno is not None:
+        reg.turno = data.turno
     db.commit()
     db.refresh(reg)
     return reg

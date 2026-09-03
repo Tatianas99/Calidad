@@ -58,7 +58,7 @@ class F006RegistroCreate(Mediciones):
     fecha: Optional[date] = None  # solo admin puede fijar fecha manual
     maquina_id: Optional[int] = None
     maquina_texto: Optional[str] = None
-    turno: int = Field(ge=1, le=3)
+    turno: Optional[int] = Field(default=None, ge=1, le=3)  # automático por horario
 
 
 class F006CabeceraUpdate(Mediciones):
@@ -70,7 +70,7 @@ class F006CabeceraUpdate(Mediciones):
     fecha: Optional[date] = None
     maquina_id: Optional[int] = None
     maquina_texto: Optional[str] = None
-    turno: int = Field(ge=1, le=3)
+    turno: Optional[int] = Field(default=None, ge=1, le=3)  # automático por horario
 
 
 class EmbalajeItemIn(BaseModel):

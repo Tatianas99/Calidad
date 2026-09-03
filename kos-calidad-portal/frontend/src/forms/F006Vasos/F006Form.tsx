@@ -191,11 +191,11 @@ export default function F006Form({
   }
 
   async function maybeGuardarCabecera(prod: Producto) {
-    if (!prod.referencia_texto || !prod.referencia_texto.trim() || !prod.maquina || !prod.turno) return
+    if (!prod.referencia_texto || !prod.referencia_texto.trim() || !prod.maquina) return
     const body = {
       orden_produccion: prod.orden_produccion ?? null,
       referencia_texto: prod.referencia_texto ?? null, marca: prod.marca ?? null, fecha: prod.fecha,
-      maquina_texto: prod.maquina ?? null, turno: prod.turno,
+      maquina_texto: prod.maquina ?? null,
       altura_vaso: prod.altura_vaso ?? null, diametro_superior: prod.diametro_superior ?? null,
       diametro_inferior: prod.diametro_inferior ?? null, grueso_rim: prod.grueso_rim ?? null,
     }
@@ -336,7 +336,7 @@ export default function F006Form({
                 >
                   <span className="pt">{prodLabel(p)}</span>
                   <span className="pm">
-                    {p.maquina || 'Sin máquina'} · {p.turno ? `T${p.turno}` : 'sin turno'} · {p.filtraciones.length} prueba(s){p.guardado ? '' : ' · sin guardar'}
+                    {p.maquina || 'Sin máquina'}{p.turno ? ` · T${p.turno}` : ''} · {p.filtraciones.length} prueba(s){p.guardado ? '' : ' · sin guardar'}
                   </span>
                   {listas.length > 0 ? (
                     <span className="prod-alert urgente">⏱ {listas.length} por registrar</span>
@@ -427,7 +427,7 @@ function ProductoDetalle({
 }) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const admin = getUser()?.rol === 'admin'
-  const cabeceraCompleta = !!(prod.referencia_texto && prod.referencia_texto.trim() && prod.maquina && prod.turno)
+  const cabeceraCompleta = !!(prod.referencia_texto && prod.referencia_texto.trim() && prod.maquina)
   const faltantesEmb = opts ? opts.embalaje_f006.filter((o) => !prod.embalaje[o.value]) : []
 
   const firmasFaltan: string[] = []
@@ -478,12 +478,6 @@ function ProductoDetalle({
             <Field label="Máquina" hint="buscar o escribir">
               <ComboBox value={prod.maquina ?? ''} onChange={(v) => onCabecera({ maquina: v })} options={maqs.map((m) => m.nombre)} placeholder="Buscar o escribir máquina…" />
             </Field>
-            <Field label="Turno">
-              <select value={prod.turno ?? ''} onChange={(e) => onCabecera({ turno: Number(e.target.value) })}>
-                <option value="">Seleccionar…</option>
-                {(opts?.turnos ?? [1, 2, 3]).map((t) => <option key={t} value={t}>Turno {t}</option>)}
-              </select>
-            </Field>
           </div>
 
           <div style={{ borderTop: '1px solid var(--border)', margin: '10px 0 14px' }} />
@@ -520,7 +514,7 @@ function ProductoDetalle({
       {tab === 'filt' && (
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Pruebas de filtración</h3>
-          {!cabeceraCompleta && <p className="muted">Completa referencia, máquina y turno (pestaña anterior) para montar pruebas.</p>}
+          {!cabeceraCompleta && <p className="muted">Completa referencia y máquina (pestaña anterior) para montar pruebas.</p>}
           {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} />}
           {prod.filtraciones.length === 0 && cabeceraCompleta && <p className="muted">Aún no hay pruebas montadas.</p>}
           {prod.filtraciones.map((f) => (
@@ -587,7 +581,9 @@ function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: st
   const montar = () => {
     if (!tp || !tm || cant === '' || faltaTemp) return
     onMontar(tp, tm, Number(cant), temp90)
-    setTp(''); setTm(''); setCant(''); setTemp90('')
+    // Tipo de prueba y papel se eligen una sola vez y se mantienen; solo se
+    // limpia la cantidad para montar la siguiente prueba.
+    setCant('')
   }
 
   return (
