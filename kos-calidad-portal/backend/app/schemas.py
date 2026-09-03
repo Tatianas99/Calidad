@@ -173,6 +173,7 @@ class F006RegistroOut(Mediciones):
     operario_nombre: Optional[str] = None
     empacador_id: Optional[int] = None
     empacador_nombre: Optional[str] = None
+    registrado_por_id: Optional[int] = None
     creado_en: datetime
     embalaje: List[EmbalajeOut] = []
     filtraciones: List[FiltracionOut] = []

@@ -118,6 +118,8 @@ class F006Registro(Base):
     operario_nombre: Mapped[Optional[str]] = mapped_column(String(120))  # buscar o escribir
     empacador_id: Mapped[Optional[int]] = mapped_column(ForeignKey("personas.id"))  # legacy
     empacador_nombre: Mapped[Optional[str]] = mapped_column(String(120))  # buscar o escribir
+    # Usuario que registró (para "recuperar finalizados" solo del propio usuario).
+    registrado_por_id: Mapped[Optional[int]] = mapped_column(Integer)
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
 
     referencia: Mapped[Optional["Referencia"]] = relationship()

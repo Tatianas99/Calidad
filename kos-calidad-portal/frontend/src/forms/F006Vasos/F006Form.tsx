@@ -291,8 +291,10 @@ export default function F006Form({
   const labelReg = (r: F006Registro) =>
     (r.referencia_texto || (r.referencia_id ? refLabel(r.referencia_id) : '') || 'Producto') + (r.marca ? ` ${r.marca}` : '')
   const dentro8h = (iso?: string | null) => !!iso && Date.now() - new Date(iso).getTime() <= 8 * 3600 * 1000
+  const miUsuarioId = getUser()?.id
   const recuperables = finalizados
-    .filter((r) => (r.operario_nombre || r.empacador_nombre) && dentro8h(r.creado_en))
+    // Solo los que finalizó el propio usuario, con firmas, en las últimas 8 horas.
+    .filter((r) => r.registrado_por_id === miUsuarioId && (r.operario_nombre || r.empacador_nombre) && dentro8h(r.creado_en))
     .sort((a, b) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime())
 
   return (

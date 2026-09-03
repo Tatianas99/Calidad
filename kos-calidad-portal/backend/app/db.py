@@ -109,6 +109,7 @@ def init_db():
     _ensure_columns("f006_registro", [
         ("operario_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
         ("empacador_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),
+        ("registrado_por_id", "INTEGER", "INT NULL"),
     ])
     _make_nullable("f006_registro", "maquina_id", "INT")
     _make_nullable("f204_registro", "maquina_id", "INT")

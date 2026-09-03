@@ -46,6 +46,7 @@ def crear_registro(
         maquina_texto=data.maquina_texto,
         # Auxiliar de calidad = persona en turno (usuario en sesión), automático.
         auxiliar_nombre=user.nombre,
+        registrado_por_id=user.id,
         turno=data.turno,
     )
     if data.id:
