@@ -72,6 +72,9 @@ export default function F006Form({
   const [msg, setMsg] = useState('')
   const [now, setNow] = useState(Date.now())
   const [busqProductos, setBusqProductos] = useState('')
+  // Recuperar registros ya finalizados de las últimas 8 horas.
+  const [finalizados, setFinalizados] = useState<F006Registro[]>([])
+  const [verRecuperar, setVerRecuperar] = useState(false)
   // La lista se puede contraer (en móvil arranca contraída para no saturar).
   const [verProductos, setVerProductos] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 820 : true))
   // Pestaña con la que abre el detalle: al elegir un producto de la lista, va
@@ -275,6 +278,23 @@ export default function F006Form({
   const productosFiltrados = st.productos.filter((p) =>
     matchKeywords(busqProductos, `${prodLabel(p)} ${p.maquina ?? ''}`))
 
+  // Recuperar finalizados: carga hoy + ayer (cubre turno nocturno) y deja solo
+  // los que tienen firmas (finalizados) creados en las últimas 8 horas.
+  const cargarFinalizados = () => {
+    const f = (x: Date) => x.toISOString().slice(0, 10)
+    const ayer = new Date(Date.now() - 24 * 3600 * 1000)
+    Promise.all([
+      apiGet<F006Registro[]>(`/f006/registros?fecha=${f(new Date())}`).catch(() => [] as F006Registro[]),
+      apiGet<F006Registro[]>(`/f006/registros?fecha=${f(ayer)}`).catch(() => [] as F006Registro[]),
+    ]).then(([a, b]) => setFinalizados([...a, ...b]))
+  }
+  const labelReg = (r: F006Registro) =>
+    (r.referencia_texto || (r.referencia_id ? refLabel(r.referencia_id) : '') || 'Producto') + (r.marca ? ` ${r.marca}` : '')
+  const dentro8h = (iso?: string | null) => !!iso && Date.now() - new Date(iso).getTime() <= 8 * 3600 * 1000
+  const recuperables = finalizados
+    .filter((r) => (r.operario_nombre || r.empacador_nombre) && dentro8h(r.creado_en))
+    .sort((a, b) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime())
+
   return (
     <div>
       <div className="btn-row" style={{ marginBottom: 6 }}>
@@ -331,6 +351,27 @@ export default function F006Form({
             })}
           </div>
           </>)}
+
+          <div className="saved-div" onClick={() => { const nv = !verRecuperar; setVerRecuperar(nv); if (nv) cargarFinalizados() }}>
+            <span>{verRecuperar ? '▾' : '▸'} Recuperar finalizados (8 h)</span>
+            <span className="saved-line" />
+          </div>
+          {verRecuperar && (
+            <div className="saved-list">
+              {recuperables.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>No hay registros finalizados en las últimas 8 horas.</p>}
+              {recuperables.map((r) => (
+                <div key={r.id} className="saved-item">
+                  <div>
+                    <strong>{labelReg(r)}</strong>
+                    <div className="muted">
+                      {r.maquina_texto || 'Sin máquina'}{r.turno ? ` · T${r.turno}` : ''} · {new Date(r.creado_en).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                  <button className="btn btn-ghost pill-btn" onClick={() => { setPestanaInicial('filt'); abrirRegistro(r) }}>Recuperar</button>
+                </div>
+              ))}
+            </div>
+          )}
         </aside>
 
         <section>
