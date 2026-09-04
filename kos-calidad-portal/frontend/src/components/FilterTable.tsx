@@ -1,5 +1,7 @@
-import { useMemo, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useMemo, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
 import { matchKeywords } from '../lib/fuzzy'
+
+const PAGE_SIZE = 15
 
 export type Col<T> = {
   key: string
@@ -46,6 +48,13 @@ export default function FilterTable<T>({
     () => rows.filter((r) => columns.every((c) => !checked[c.key] || checked[c.key].has(valueOf(c, r)))),
     [rows, columns, checked],
   )
+
+  // Paginación (15 por página).
+  const [page, setPage] = useState(0)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  useEffect(() => { setPage(0) }, [checked, rows])
+  const pageSafe = Math.min(page, totalPages - 1)
+  const pageRows = filtered.slice(pageSafe * PAGE_SIZE, pageSafe * PAGE_SIZE + PAGE_SIZE)
 
   const isChecked = (colKey: string, v: string) =>
     checked[colKey] ? checked[colKey].has(v) : true
@@ -106,7 +115,7 @@ export default function FilterTable<T>({
           {filtered.length === 0 && (
             <tr><td colSpan={ncols} className="muted center" style={{ padding: 18 }}>Sin resultados.</td></tr>
           )}
-          {filtered.map((r) => {
+          {pageRows.map((r) => {
             const k = getKey(r)
             return (
               <tr key={k} className={renderDetail ? 'clickable' : ''} onClick={() => renderDetail && setOpenDetail(k)}>
@@ -116,7 +125,16 @@ export default function FilterTable<T>({
           })}
         </tbody>
       </table>
-      <p className="muted" style={{ fontSize: '.82rem' }}>{filtered.length} de {rows.length} registro(s)</p>
+      <div className="tbl-foot">
+        <span className="muted" style={{ fontSize: '.82rem' }}>{filtered.length} de {rows.length} registro(s)</span>
+        {totalPages > 1 && (
+          <div className="pager">
+            <button className="btn btn-ghost pill-btn" disabled={pageSafe === 0} onClick={() => setPage(pageSafe - 1)}>‹ Anterior</button>
+            <span className="muted" style={{ fontSize: '.82rem' }}>Página {pageSafe + 1} de {totalPages}</span>
+            <button className="btn btn-ghost pill-btn" disabled={pageSafe >= totalPages - 1} onClick={() => setPage(pageSafe + 1)}>Siguiente ›</button>
+          </div>
+        )}
+      </div>
 
       {openCol && (
         <>

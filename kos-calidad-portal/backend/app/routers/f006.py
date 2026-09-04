@@ -5,6 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from sqlalchemy.orm import selectinload
+
 from ..db import get_db
 from .. import models, schemas
 from ..auth import require_admin, get_current_user
@@ -67,7 +69,10 @@ def listar_registros(
     turno: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
-    q = db.query(models.F006Registro)
+    q = db.query(models.F006Registro).options(
+        selectinload(models.F006Registro.embalaje),
+        selectinload(models.F006Registro.filtraciones),
+    )
     if fecha:
         q = q.filter(models.F006Registro.fecha == fecha)
     if turno:

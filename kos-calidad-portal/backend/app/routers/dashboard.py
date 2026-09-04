@@ -14,7 +14,7 @@ from datetime import date, datetime, time
 from typing import Optional
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
 from .. import models
@@ -99,7 +99,10 @@ def dashboard(
         return f"{base} {marca}".strip() if marca else base
 
     # ---------------- Filtración (F-006): % NC ---------------- #
-    f6 = _rango(db.query(models.F006Registro), models.F006Registro.fecha).all()
+    f6 = _rango(
+        db.query(models.F006Registro).options(selectinload(models.F006Registro.filtraciones)),
+        models.F006Registro.fecha,
+    ).all()
     if tokens:
         f6 = [r for r in f6 if _match(tokens, f"{r.orden_produccion or ''} {ref_nombre(r)}")]
     nc_turno, mu_turno = {}, {}
@@ -206,7 +209,10 @@ def dashboard(
     }
 
     # ---------------- Rutas Calidad (F-158) ---------------- #
-    f158 = _rango(db.query(models.F158Recorrido), models.F158Recorrido.fecha).all()
+    f158 = _rango(
+        db.query(models.F158Recorrido).options(selectinload(models.F158Recorrido.items)),
+        models.F158Recorrido.fecha,
+    ).all()
     if tokens:
         def _texto158(r):
             op = next((it.valor for it in r.items if it.campo_key == "op" and it.valor), "")

@@ -190,6 +190,9 @@ textarea { min-height: 70px; resize: vertical; }
 /* Título contraíble (p. ej. "Productos del turno"). */
 .side-toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
 .side-toggle .side-caret { color: var(--muted); font-size: .85em; }
+/* Pie de tabla con paginación. */
+.tbl-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.pager { display: flex; align-items: center; gap: 10px; }
 .muted { color: var(--muted); }
 .center { text-align: center; }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);

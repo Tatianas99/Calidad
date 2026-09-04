@@ -12,7 +12,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
 from .. import models, schemas, storage
@@ -59,7 +59,10 @@ def listar_recorridos(
     db: Session = Depends(get_db),
 ):
     """Lista recorridos. `mios=true` limita a los del usuario actual (panel lateral)."""
-    q = db.query(models.F158Recorrido)
+    q = db.query(models.F158Recorrido).options(
+        selectinload(models.F158Recorrido.items),
+        selectinload(models.F158Recorrido.adjuntos),
+    )
     if fecha:
         q = q.filter(models.F158Recorrido.fecha == fecha)
     if proceso:
