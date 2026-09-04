@@ -106,7 +106,18 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
       <div>
         <h4>Pruebas de filtración</h4>
         {r.filtraciones.length === 0 && <p className="muted">Sin pruebas.</p>}
-        {r.filtraciones.map((f) => (
+        {r.filtraciones.map((f) => f.maquina_parada ? (
+          <div key={f.id} className="filt-card">
+            <div className="filt-card-head">
+              <strong style={{ color: 'var(--bad)' }}>⛔ Máquina parada</strong>
+              <span className={'badge ' + (f.estado === 'finalizada' ? 'fin' : 'proc')} style={{ marginLeft: 'auto' }}>
+                {f.estado === 'finalizada' ? 'Finalizada' : 'En proceso'}
+              </span>
+            </div>
+            <div className="muted" style={{ fontSize: '.82rem', marginTop: 2 }}>Registrada a las {hhmm(f.hora_montaje)}</div>
+            {f.comentario && <div className="filt-card-com">{f.comentario}</div>}
+          </div>
+        ) : (
           <div key={f.id} className="filt-card">
             <div className="filt-card-head">
               <strong>{opts ? label(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba}</strong>

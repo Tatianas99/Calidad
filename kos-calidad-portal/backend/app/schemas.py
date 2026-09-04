@@ -98,21 +98,26 @@ class EmbalajeUpdate(BaseModel):
 
 class FiltracionCreate(BaseModel):
     id: Optional[str] = None  # UUID generado en el cliente (idempotencia)
-    tipo_prueba: str
-    tipo_material: str
-    cantidad_muestra: int = Field(ge=0)
+    maquina_parada: bool = False  # entrada especial (solo observaciones)
+    tipo_prueba: Optional[str] = None
+    tipo_material: Optional[str] = None
+    cantidad_muestra: Optional[int] = Field(default=None, ge=0)
     temp_90: Optional[str] = None  # café caliente: si|no
 
     @field_validator("tipo_prueba")
     @classmethod
-    def _val_prueba(cls, v):
+    def _val_prueba(cls, v, info):
+        if info.data.get("maquina_parada"):
+            return v
         if v not in TIPOS_PRUEBA_KEYS:
             raise ValueError(f"Tipo de prueba inválido: {v}")
         return v
 
     @field_validator("tipo_material")
     @classmethod
-    def _val_material(cls, v):
+    def _val_material(cls, v, info):
+        if info.data.get("maquina_parada"):
+            return v
         if v not in TIPOS_MATERIAL_KEYS:
             raise ValueError(f"Tipo de material inválido: {v}")
         return v
@@ -143,9 +148,10 @@ class EmbalajeOut(BaseModel):
 class FiltracionOut(BaseModel):
     id: str
     hora_montaje: datetime
-    tipo_prueba: str
-    tipo_material: str
-    cantidad_muestra: int
+    maquina_parada: bool = False
+    tipo_prueba: Optional[str] = None
+    tipo_material: Optional[str] = None
+    cantidad_muestra: Optional[int] = None
     temp_90: Optional[str] = None
     hora_lectura: Optional[datetime] = None
     cantidad_cumple: Optional[int] = None

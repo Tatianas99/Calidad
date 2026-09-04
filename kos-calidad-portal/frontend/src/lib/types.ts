@@ -21,6 +21,7 @@ export type Opciones = {
 export type Filtracion = {
   id: string
   hora_montaje: string
+  maquina_parada?: boolean
   tipo_prueba: string
   tipo_material: string
   cantidad_muestra: number

@@ -16,6 +16,7 @@ type Tab = 'pe' | 'filt' | 'firmas'
 
 type LocalFiltracion = {
   id: string
+  maquina_parada?: boolean
   tipo_prueba: string
   tipo_material: string
   cantidad_muestra: number
@@ -111,6 +112,7 @@ export default function F006Form({
     embalaje: Object.fromEntries(r.embalaje.map((e) => [e.item, e.resultado])),
     filtraciones: r.filtraciones.map((f) => ({
       id: f.id,
+      maquina_parada: f.maquina_parada ?? undefined,
       tipo_prueba: f.tipo_prueba,
       tipo_material: f.tipo_material,
       cantidad_muestra: f.cantidad_muestra,
@@ -240,6 +242,18 @@ export default function F006Form({
     const r = await apiMutate('POST', `/f006/registros/${prodId}/filtracion`, {
       id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant, temp_90: temp90 || null,
     })
+    feedback(!r.ok)
+  }
+
+  // "Máquina parada": entrada especial (solo observaciones al registrar).
+  async function montarParada(prodId: string) {
+    const id = uuid()
+    const nueva: LocalFiltracion = {
+      id, maquina_parada: true, tipo_prueba: '', tipo_material: '', cantidad_muestra: 0,
+      montadaEnMs: Date.now(), estado: 'en_proceso',
+    }
+    mapProd(prodId, (p) => ({ ...p, filtraciones: [nueva, ...p.filtraciones] }))
+    const r = await apiMutate('POST', `/f006/registros/${prodId}/filtracion`, { id, maquina_parada: true })
     feedback(!r.ok)
   }
 
@@ -395,6 +409,7 @@ export default function F006Form({
               onPatch={(patch) => patchProd(selected.registroId, patch)}
               onEmbalaje={(item, r) => cambiarEmbalaje(selected.registroId, item, r)}
               onMontar={(tp, tm, c, temp) => montarFiltracion(selected.registroId, tp, tm, c, temp)}
+              onMontarParada={() => montarParada(selected.registroId)}
               onResultado={(f, c, goteo, tapa, com) => registrarResultado(selected.registroId, f, c, goteo, tapa, com)}
               onFirmas={(patch) => patchProd(selected.registroId, patch)}
               onFinalizar={() => finalizarProducto(selected.registroId)}
@@ -409,7 +424,7 @@ export default function F006Form({
 }
 
 function ProductoDetalle({
-  prod, initialTab, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onResultado, onFirmas, onFinalizar,
+  prod, initialTab, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onMontarParada, onResultado, onFirmas, onFinalizar,
 }: {
   prod: Producto
   initialTab: Tab
@@ -421,6 +436,7 @@ function ProductoDetalle({
   onPatch: (patch: Partial<Producto>) => void
   onEmbalaje: (item: string, resultado: string) => void
   onMontar: (tp: string, tm: string, cant: number, temp90: string) => void
+  onMontarParada: () => void
   onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) => void
   onFirmas: (patch: Partial<Producto>) => void
   onFinalizar: () => void
@@ -515,7 +531,7 @@ function ProductoDetalle({
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Pruebas de filtración</h3>
           {!cabeceraCompleta && <p className="muted">Completa referencia y máquina (pestaña anterior) para montar pruebas.</p>}
-          {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} />}
+          {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} onMontarParada={onMontarParada} />}
           {prod.filtraciones.length === 0 && cabeceraCompleta && <p className="muted">Aún no hay pruebas montadas.</p>}
           {prod.filtraciones.map((f) => (
             <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={(prod.referencia_texto || '') + (prod.marca ? ` ${prod.marca}` : '')} onResultado={onResultado} />
@@ -571,7 +587,7 @@ function ProductoDetalle({
   )
 }
 
-function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: string, tm: string, c: number, temp90: string) => void }) {
+function NuevaFiltracion({ opts, onMontar, onMontarParada }: { opts: Opciones; onMontar: (tp: string, tm: string, c: number, temp90: string) => void; onMontarParada: () => void }) {
   const [tp, setTp] = useState('')
   const [tm, setTm] = useState('')
   const [cant, setCant] = useState('')
@@ -612,9 +628,14 @@ function NuevaFiltracion({ opts, onMontar }: { opts: Opciones; onMontar: (tp: st
       <Field label="Cantidad de muestra" hint="unidades montadas">
         <input type="number" min={0} inputMode="numeric" value={cant} onChange={(e) => setCant(e.target.value)} />
       </Field>
-      <button className="btn btn-accent" disabled={!tp || !tm || cant === '' || faltaTemp} onClick={montar}>
-        Montar prueba
-      </button>
+      <div className="btn-row" style={{ justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <button className="btn btn-accent" disabled={!tp || !tm || cant === '' || faltaTemp} onClick={montar}>
+          Montar prueba
+        </button>
+        <button className="btn btn-parada" onClick={onMontarParada}>
+          ⛔ Máquina parada
+        </button>
+      </div>
     </div>
   )
 }
@@ -646,6 +667,33 @@ function FiltracionCard({
 
   const prueba = opts ? labelOf(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba
   const material = opts ? labelOf(opts.tipos_material_f006, f.tipo_material) : f.tipo_material
+
+  // Entrada de "Máquina parada": solo observaciones.
+  if (f.maquina_parada) {
+    return (
+      <div className={'filt parada' + (f.estado === 'finalizada' ? ' fin' : '')}>
+        <div className="head">
+          <strong>⛔ Máquina parada · {productoLabel}</strong>
+          <span className={'badge ' + (f.estado === 'finalizada' ? 'fin' : 'proc')}>
+            {f.estado === 'finalizada' ? 'Finalizada' : 'En proceso'}
+          </span>
+        </div>
+        <p className="muted" style={{ margin: '0 0 8px' }}>Registrada a las {hhmm(f.montadaEnMs)}</p>
+        {f.estado === 'en_proceso' ? (
+          <>
+            <Field label="Observaciones">
+              <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} />
+            </Field>
+            <button className="btn btn-primary" onClick={() => onResultado(f, 0, '', '', comentario)}>
+              Registrar resultado
+            </button>
+          </>
+        ) : (
+          <p style={{ margin: 0 }} className="muted">{f.comentario || 'Sin observaciones.'}</p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className={'filt' + (f.estado === 'finalizada' ? ' fin' : '')}>

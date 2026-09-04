@@ -143,6 +143,7 @@ def agregar_filtracion(
             return existing
     kwargs = dict(
         registro_id=registro_id,
+        maquina_parada=data.maquina_parada,
         tipo_prueba=data.tipo_prueba,
         tipo_material=data.tipo_material,
         cantidad_muestra=data.cantidad_muestra,

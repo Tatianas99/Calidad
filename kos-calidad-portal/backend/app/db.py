@@ -104,7 +104,12 @@ def init_db():
         ("goteo_vaso_tapa", "VARCHAR(4)", "NVARCHAR(4) NULL"),
         ("tapa_centrada", "VARCHAR(4)", "NVARCHAR(4) NULL"),
         ("temp_90", "VARCHAR(4)", "NVARCHAR(4) NULL"),
+        ("maquina_parada", "BOOLEAN", "BIT NOT NULL DEFAULT 0"),
     ])
+    # "Máquina parada" no lleva prueba: se hacen anulables estos campos.
+    _make_nullable("f006_filtracion", "tipo_prueba", "NVARCHAR(30)")
+    _make_nullable("f006_filtracion", "tipo_material", "NVARCHAR(20)")
+    _make_nullable("f006_filtracion", "cantidad_muestra", "INT")
     # Firmas F-006 en texto (buscar o escribir si no está en la lista).
     _ensure_columns("f006_registro", [
         ("operario_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),

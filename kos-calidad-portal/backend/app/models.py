@@ -151,9 +151,11 @@ class F006Filtracion(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     registro_id: Mapped[str] = mapped_column(ForeignKey("f006_registro.id"), nullable=False)
     hora_montaje: Mapped[datetime] = mapped_column(DateTime, default=now_co)
-    tipo_prueba: Mapped[str] = mapped_column(String(30), nullable=False)
-    tipo_material: Mapped[str] = mapped_column(String(20), nullable=False)
-    cantidad_muestra: Mapped[int] = mapped_column(Integer, nullable=False)
+    # "Máquina parada": entrada especial sin prueba, solo observaciones.
+    maquina_parada: Mapped[bool] = mapped_column(Boolean, default=False)
+    tipo_prueba: Mapped[Optional[str]] = mapped_column(String(30))
+    tipo_material: Mapped[Optional[str]] = mapped_column(String(20))
+    cantidad_muestra: Mapped[Optional[int]] = mapped_column(Integer)
     temp_90: Mapped[Optional[str]] = mapped_column(String(4))  # café caliente: si|no (¿90°C?)
     hora_lectura: Mapped[Optional[datetime]] = mapped_column(DateTime)
     cantidad_cumple: Mapped[Optional[int]] = mapped_column(Integer)     # no filtra

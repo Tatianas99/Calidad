@@ -193,6 +193,11 @@ textarea { min-height: 70px; resize: vertical; }
 /* Pie de tabla con paginación. */
 .tbl-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .pager { display: flex; align-items: center; gap: 10px; }
+/* Botón y tarjeta de "Máquina parada". */
+.btn-parada { background: var(--bad); color: #fff; border: 1px solid var(--bad); }
+.btn-parada:hover { filter: brightness(0.94); }
+.filt.parada { border-left: 4px solid var(--bad); }
+.filt.parada .head strong { color: var(--bad); }
 .muted { color: var(--muted); }
 .center { text-align: center; }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
