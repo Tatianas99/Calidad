@@ -423,15 +423,16 @@ def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: st
         story.append(Spacer(1, 6))
     for fl in spec.get("pre", []):
         story.append(fl)
-    story.append(Paragraph("Resumen", _S["h2"]))
+    # El "resumen" (una fila por registro) no se incluye: es igual a la tabla en
+    # pantalla. El PDF trae el detalle (y, en F-158, el cuadro proceso × turno).
     if spec["rows"]:
-        story.append(_tabla_resumen(spec["header"], spec["rows"]))
         if spec["detalles"]:
-            story.append(PageBreak())
             story.append(Paragraph(spec.get("detalle_titulo", "Detalle por registro"), _S["h2"]))
             story.append(Spacer(1, 3))
             for d in spec["detalles"]:
                 story.append(d); story.append(Spacer(1, 5))
+        else:
+            story.append(Paragraph("Sin recorridos con novedad o evidencia en el rango.", _S["muted"]))
     else:
         story.append(Paragraph("Sin registros en el rango seleccionado.", _S["muted"]))
     doc.build(story, onFirstPage=_page, onLaterPages=_page)
