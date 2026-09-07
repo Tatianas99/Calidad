@@ -1,4 +1,6 @@
 """Endpoints de catálogos (personas, máquinas, referencias, puntos) y opciones."""
+import json
+from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -13,6 +15,17 @@ from ..constants import (
 )
 
 router = APIRouter(prefix="/catalogos", tags=["Catálogos"])
+
+_FICHAS_PATH = Path(__file__).resolve().parent.parent / "fichas_tecnicas.json"
+
+
+@router.get("/fichas")
+def fichas_tecnicas():
+    """Base de datos de fichas técnicas (medidas + enlace al PDF/archivo)."""
+    try:
+        return json.loads(_FICHAS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
 
 
 @router.get("/personas", response_model=list[schemas.PersonaOut])

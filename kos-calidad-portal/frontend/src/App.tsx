@@ -15,9 +15,10 @@ import RegistrosF204 from './views/RegistrosF204'
 import RegistrosF005 from './views/RegistrosF005'
 import Configuracion from './views/Configuracion'
 import Dashboard from './views/Dashboard'
+import FichasTecnicas from './views/FichasTecnicas'
 import { CupsIcon, WaterTestIcon, BadgeIcon, TrashIcon, RollIcon } from './components/FormIcons'
 
-type View = 'home' | 'dashboard' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config'
+type View = 'home' | 'dashboard' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config' | 'fichas'
 
 export default function App() {
   const [user, setUser] = useState<Usuario | null>(getUser())
@@ -62,6 +63,7 @@ export default function App() {
       {hasPermiso('registrar_f015') && <NavItem label="F-015 Cloro/PH" active={view === 'f015'} onClick={() => irA('f015')} />}
       {hasPermiso('registrar_f158') && <NavItem label="F-158 Rutas Calidad" active={view === 'f158'} onClick={() => irA('f158')} />}
       {hasPermiso('registrar_f204') && <NavItem label="F-204 Clase B y desperdicio" active={view === 'f204'} onClick={() => irA('f204')} />}
+      <NavItem label="📐 Fichas técnicas" active={view === 'fichas'} onClick={() => irA('fichas')} />
       <a className="nav-item" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📋 Portal de PQRS ↗</a>
 
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
@@ -101,6 +103,7 @@ export default function App() {
           {view === 'reg158' && <RegistrosF158 onBack={() => setView('reportes')} onEditar={(id) => { setF158Edit(id); setView('f158') }} />}
           {view === 'reg204' && <RegistrosF204 onBack={() => setView('reportes')} onEditar={(id) => { setF204Edit(id); setView('f204') }} />}
           {view === 'config' && <Configuracion />}
+          {view === 'fichas' && <FichasTecnicas />}
         </main>
       </div>
     </div>
@@ -180,6 +183,10 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
             <div className="code">F-204</div><h2>Clase B y desperdicio</h2>
           </button>
         )}
+        <button className="card tint blue-2" onClick={() => onOpen('fichas')}>
+          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>📐</span>
+          <div className="code">Fichas</div><h2>Fichas técnicas</h2>
+        </button>
         <a className="card tint blue-3" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
           <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>📋</span>
           <div className="code">PQRS ↗</div><h2>Portal de PQRS</h2>

@@ -197,6 +197,10 @@ textarea { min-height: 70px; resize: vertical; }
 .pdf-modal { max-width: 360px; }
 .pdf-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-weight: 600; font-size: .9rem; }
 .pdf-field input { font: inherit; }
+/* Visor de ficha técnica (PDF embebido). */
+.ft-visor { max-width: 900px; width: 92vw; height: 88vh; display: flex; flex-direction: column; }
+.ft-visor-head { display: flex; align-items: center; gap: 8px; padding: 4px 34px 8px 2px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.ft-iframe { flex: 1; width: 100%; border: none; border-radius: 8px; background: var(--surface-2); }
 /* Botón y tarjeta de "Máquina parada". */
 .btn-parada { background: var(--bad); color: #fff; border: 1px solid var(--bad); }
 .btn-parada:hover { filter: brightness(0.94); }
