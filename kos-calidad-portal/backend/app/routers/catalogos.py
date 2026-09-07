@@ -1,12 +1,11 @@
 """Endpoints de catálogos (personas, máquinas, referencias, puntos) y opciones."""
-import json
-from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from .. import models, schemas
+from ..auth import require_admin
 from ..personal import sync_personas
 from ..referencias_sync import sync_referencias
 from ..maquinas_sync import sync_maquinas
@@ -16,16 +15,26 @@ from ..constants import (
 
 router = APIRouter(prefix="/catalogos", tags=["Catálogos"])
 
-_FICHAS_PATH = Path(__file__).resolve().parent.parent / "fichas_tecnicas.json"
 
-
-@router.get("/fichas")
-def fichas_tecnicas():
+@router.get("/fichas", response_model=list[schemas.FichaTecnicaOut])
+def fichas_tecnicas(db: Session = Depends(get_db)):
     """Base de datos de fichas técnicas (medidas + enlace al PDF/archivo)."""
-    try:
-        return json.loads(_FICHAS_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return []
+    return db.query(models.FichaTecnica).order_by(models.FichaTecnica.orden).all()
+
+
+@router.put("/fichas/{ficha_id}", response_model=schemas.FichaTecnicaOut)
+def editar_ficha(
+    ficha_id: str, data: schemas.FichaTecnicaUpdate,
+    _admin: models.Usuario = Depends(require_admin), db: Session = Depends(get_db),
+):
+    """Edita el nombre de la referencia de una ficha técnica. Solo admin."""
+    f = db.get(models.FichaTecnica, ficha_id)
+    if not f:
+        raise HTTPException(status_code=404, detail="Ficha no encontrada")
+    f.referencia = data.referencia.strip()
+    db.commit()
+    db.refresh(f)
+    return f
 
 
 @router.get("/personas", response_model=list[schemas.PersonaOut])

@@ -298,3 +298,21 @@ class F005Registro(Base):
     responsable_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
     responsable_nombre: Mapped[Optional[str]] = mapped_column(String(120))
     creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+
+
+# --------------------------------------------------------------------------- #
+# Fichas técnicas (base de datos de medidas; se puede editar la referencia)
+# --------------------------------------------------------------------------- #
+class FichaTecnica(Base):
+    __tablename__ = "ficha_tecnica"
+    id: Mapped[str] = mapped_column(String(120), primary_key=True)   # slug del archivo
+    codigo: Mapped[Optional[str]] = mapped_column(String(30))
+    categoria: Mapped[Optional[str]] = mapped_column(String(40))
+    referencia: Mapped[Optional[str]] = mapped_column(String(200))    # editable por admin
+    plastificado: Mapped[Optional[str]] = mapped_column(String(60))
+    diam_inferior: Mapped[Optional[str]] = mapped_column(String(40))
+    rim: Mapped[Optional[str]] = mapped_column(String(40))
+    diam_exterior: Mapped[Optional[str]] = mapped_column(String(40))
+    altura: Mapped[Optional[str]] = mapped_column(String(40))
+    archivo: Mapped[Optional[str]] = mapped_column(String(200))
+    orden: Mapped[int] = mapped_column(Integer, default=0)            # orden de despliegue

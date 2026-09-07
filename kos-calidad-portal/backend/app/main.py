@@ -41,6 +41,8 @@ async def lifespan(app: FastAPI):
             sync_personas(db)
             sync_referencias(db)
             sync_maquinas(db)
+            from .fichas_sync import sync_fichas
+            sync_fichas(db)
         finally:
             db.close()
     except Exception:

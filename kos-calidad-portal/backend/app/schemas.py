@@ -437,3 +437,21 @@ class TurnoHorarioItem(BaseModel):
 
 class TurnosUpdate(BaseModel):
     horarios: List[TurnoHorarioItem] = []
+
+
+class FichaTecnicaOut(BaseModel):
+    id: str
+    codigo: Optional[str] = None
+    categoria: Optional[str] = None
+    referencia: Optional[str] = None
+    plastificado: Optional[str] = None
+    diam_inferior: Optional[str] = None
+    rim: Optional[str] = None
+    diam_exterior: Optional[str] = None
+    altura: Optional[str] = None
+    archivo: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FichaTecnicaUpdate(BaseModel):
+    referencia: str

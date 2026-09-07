@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { apiGet, apiBaseUrl } from '../lib/api'
+import { apiGet, apiSend, apiBaseUrl } from '../lib/api'
+import { getUser } from '../lib/auth'
 import { matchKeywords } from '../lib/fuzzy'
 
 type Ficha = {
-  codigo: string; categoria: string; referencia: string
+  id: string; codigo: string; categoria: string; referencia: string
   plastificado: string; diam_inferior: string; rim: string
   diam_exterior: string; altura: string; archivo: string
 }
@@ -13,10 +14,25 @@ export default function FichasTecnicas() {
   const [q, setQ] = useState('')
   const [cargando, setCargando] = useState(true)
   const [ver, setVer] = useState<Ficha | null>(null)   // ficha en visor (PDF)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editVal, setEditVal] = useState('')
+  const admin = getUser()?.rol === 'admin'
 
   useEffect(() => {
     apiGet<Ficha[]>('/catalogos/fichas').then(setFichas).catch(() => {}).finally(() => setCargando(false))
   }, [])
+
+  async function guardarNombre(f: Ficha) {
+    const nombre = editVal.trim()
+    if (!nombre) return
+    try {
+      await apiSend('PUT', `/catalogos/fichas/${f.id}`, { referencia: nombre })
+      setFichas((fs) => fs.map((x) => (x.id === f.id ? { ...x, referencia: nombre } : x)))
+      setEditId(null)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'No se pudo guardar')
+    }
+  }
 
   const filtradas = useMemo(
     () => fichas.filter((f) => matchKeywords(q, `${f.referencia} ${f.categoria} ${f.codigo}`)),
@@ -57,7 +73,20 @@ export default function FichasTecnicas() {
               {filtradas.map((f, i) => (
                 <tr key={i}>
                   <td>
-                    <b>{f.referencia}</b>
+                    {editId === f.id ? (
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        <input autoFocus value={editVal} onChange={(e) => setEditVal(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') guardarNombre(f); if (e.key === 'Escape') setEditId(null) }}
+                          style={{ font: 'inherit', minWidth: 150 }} />
+                        <button className="btn btn-primary pill-btn" onClick={() => guardarNombre(f)}>✓</button>
+                        <button className="btn btn-ghost pill-btn" onClick={() => setEditId(null)}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <b>{f.referencia}</b>
+                        {admin && <button className="btn btn-ghost pill-btn" title="Editar nombre" onClick={() => { setEditId(f.id); setEditVal(f.referencia) }}>✏️</button>}
+                      </div>
+                    )}
                     {f.codigo && <div className="muted" style={{ fontSize: '.74rem' }}>{f.codigo}</div>}
                   </td>
                   <td>{f.categoria}</td>
