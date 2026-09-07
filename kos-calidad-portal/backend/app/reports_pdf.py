@@ -12,12 +12,13 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak, KeepTogether,
 )
 from sqlalchemy.orm import selectinload
 
-from . import models
+from . import models, storage
 from .constants import TIPOS_PRUEBA_F006, TIPOS_MATERIAL_F006
 from .constants_f158 import PROCESO_LABEL
 
@@ -154,6 +155,47 @@ def _maq_txt(reg, maq):
     return getattr(reg, "maquina_texto", None) or maq.get(getattr(reg, "maquina_id", None)) or (reg.maquina if hasattr(reg, "maquina") and isinstance(reg.maquina, str) else "") or ""
 
 
+def _reducir(data: bytes, max_px=1000, calidad=70) -> bytes:
+    """Reduce y recomprime la imagen (JPEG) para no inflar el PDF."""
+    from PIL import Image as PILImage
+    im = PILImage.open(BytesIO(data))
+    if im.mode not in ("RGB", "L"):
+        im = im.convert("RGB")
+    im.thumbnail((max_px, max_px))
+    out = BytesIO()
+    im.save(out, format="JPEG", quality=calidad, optimize=True)
+    return out.getvalue()
+
+
+def _img_flowable(data: bytes, max_w=55 * mm, max_h=45 * mm):
+    """Imagen escalada conservando proporción (para incrustar evidencias)."""
+    iw, ih = ImageReader(BytesIO(data)).getSize()
+    if not iw or not ih:
+        return None
+    w, h = max_w, max_w * ih / iw
+    if h > max_h:
+        h, w = max_h, max_h * iw / ih
+    return Image(BytesIO(data), width=w, height=h)
+
+
+def _imagenes_recorrido(adjuntos, maximo=4):
+    """Devuelve (flowables_imagenes, n_videos). Best-effort: ignora fallos."""
+    imgs, videos = [], 0
+    for a in adjuntos:
+        if a.tipo == "video":
+            videos += 1
+            continue
+        if len(imgs) >= maximo:
+            continue
+        try:
+            fl = _img_flowable(_reducir(storage.leer(a.ruta)))
+            if fl is not None:
+                imgs.append(fl)
+        except Exception:
+            pass
+    return imgs, videos
+
+
 # ------------------------------- F-006 ------------------------------------- #
 def _f006(db, desde, hasta):
     maq, ref = _catalogos(db)
@@ -210,12 +252,15 @@ def _f006(db, desde, hasta):
 
 # ------------------------------- F-158 ------------------------------------- #
 def _f158(db, desde, hasta):
+    from .routers.turnos import cargar_horarios, turno_de
+    horarios = cargar_horarios(db)
     regs = (db.query(models.F158Recorrido)
-            .options(selectinload(models.F158Recorrido.items))
+            .options(selectinload(models.F158Recorrido.items), selectinload(models.F158Recorrido.adjuntos))
             .filter(models.F158Recorrido.fecha_hora >= desde, models.F158Recorrido.fecha_hora <= hasta)
             .order_by(models.F158Recorrido.fecha_hora).all())
     header = ["Fecha", "Hora", "Proceso", "Máquina", "OP", "Referencia", "Responsable", "C", "NC"]
     rows, detalles = [], []
+    conteo = {}  # proceso -> [t1, t2, t3]
     for r in regs:
         f, h = _dt(r.fecha_hora)
         op = next((it.valor for it in r.items if it.campo_key == "op" and it.valor), "")
@@ -224,22 +269,63 @@ def _f158(db, desde, hasta):
         nc = sum(1 for it in r.items if it.tipo == "cncna" and it.valor == "NC")
         proc = PROCESO_LABEL.get(r.proceso, r.proceso)
         rows.append([f, h, proc, r.maquina or "", op, refv, r.responsable_nombre or "", str(c), str(nc)])
+        # Conteo por proceso y turno (turno derivado de la hora).
+        ti = turno_de(r.fecha_hora, horarios) - 1
+        conteo.setdefault(proc, [0, 0, 0])[ti] += 1
+        # Detalle SOLO si tiene No Cumple, comentario o evidencia (imagen/video).
+        tiene_nc = nc > 0
+        tiene_com = bool(r.observaciones and r.observaciones.strip())
+        tiene_adj = len(r.adjuntos) > 0
+        if not (tiene_nc or tiene_com or tiene_adj):
+            continue
         items = [[it.campo_label, it.valor or "—"] for it in r.items if it.campo_key != "op" and it.tipo != "referencia"]
         tablas = [_mini(["Ítem", "Resultado"], items)] if items else []
         lineas = []
         if refv:
             lineas.append(f"<b>Referencia:</b> {_esc(refv)}")
-        if r.observaciones:
+        if tiene_nc:
+            nc_items = ", ".join(it.campo_label for it in r.items if it.tipo == "cncna" and it.valor == "NC")
+            lineas.append(f'<b>No cumple ({nc}):</b> <font color="#c5221f">{_esc(nc_items)}</font>')
+        if tiene_com:
             lineas.append(f"<b>Observaciones:</b> {_esc(r.observaciones)}")
+        imgs, videos = _imagenes_recorrido(r.adjuntos) if tiene_adj else ([], 0)
+        if videos:
+            lineas.append(f"<b>Video(s):</b> {videos} (no se incrustan)")
+        if imgs:
+            # Imágenes en filas de 2.
+            filas_img = [imgs[i:i + 2] for i in range(0, len(imgs), 2)]
+            for fila in filas_img:
+                while len(fila) < 2:
+                    fila.append("")
+            tablas.append(Table(filas_img, hAlign="LEFT",
+                                style=TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                                  ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                                  ("TOPPADDING", (0, 0), (-1, -1), 3),
+                                                  ("RIGHTPADDING", (0, 0), (-1, -1), 6)])))
         detalles.append(_bloque(
             f"{proc} · {r.maquina or 'Sin máquina'}",
             f"OP {op or '—'} · {r.responsable_nombre or '—'} · {f} {h}",
             lineas, tablas,
         ))
+    # Tabla resumen proceso × turno.
+    cnt_rows = []
+    tot = [0, 0, 0]
+    for p, v in sorted(conteo.items()):
+        cnt_rows.append([p, str(v[0]), str(v[1]), str(v[2]), str(sum(v))])
+        for i in range(3):
+            tot[i] += v[i]
+    cnt_rows.append(["TOTAL", str(tot[0]), str(tot[1]), str(tot[2]), str(sum(tot))])
+    pre = [
+        Paragraph("Rutas por proceso y turno", _S["h2"]),
+        _tabla_resumen(["Proceso", "Turno 1", "Turno 2", "Turno 3", "Total"], cnt_rows),
+        Spacer(1, 6),
+    ]
     return {
         "titulo": "F-158 · Rutas de Calidad",
-        "kpis": [f"Recorridos: {len(regs)}"],
+        "kpis": [f"Recorridos: {len(regs)}", f"Con novedad/evidencia: {len(detalles)}"],
+        "pre": pre,
         "header": header, "rows": rows, "detalles": detalles,
+        "detalle_titulo": "Detalle (solo con No Cumple, comentario o evidencia)",
     }
 
 
@@ -334,14 +420,18 @@ def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: st
     story = _encabezado(spec["titulo"], desde, hasta, usuario)
     if spec["kpis"]:
         story.append(Paragraph(" &nbsp;·&nbsp; ".join(_esc(k) for k in spec["kpis"]), _S["kpi"]))
-        story.append(Spacer(1, 4))
+        story.append(Spacer(1, 6))
+    for fl in spec.get("pre", []):
+        story.append(fl)
     story.append(Paragraph("Resumen", _S["h2"]))
     if spec["rows"]:
         story.append(_tabla_resumen(spec["header"], spec["rows"]))
-        story.append(PageBreak())
-        story.append(Paragraph("Detalle por registro", _S["h2"]))
-        for d in spec["detalles"]:
-            story.append(d); story.append(Spacer(1, 5))
+        if spec["detalles"]:
+            story.append(PageBreak())
+            story.append(Paragraph(spec.get("detalle_titulo", "Detalle por registro"), _S["h2"]))
+            story.append(Spacer(1, 3))
+            for d in spec["detalles"]:
+                story.append(d); story.append(Spacer(1, 5))
     else:
         story.append(Paragraph("Sin registros en el rango seleccionado.", _S["muted"]))
     doc.build(story, onFirstPage=_page, onLaterPages=_page)

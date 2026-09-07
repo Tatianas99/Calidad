@@ -181,6 +181,13 @@ def url(ruta: str) -> str:
     return f"/uploads/{ruta}"
 
 
+def leer(ruta: str) -> bytes:
+    """Lee los bytes del archivo (Azure o disco). Para incrustar en PDF."""
+    if usa_azure():
+        return _servicio().get_blob_client(AZURE_STORAGE_CONTAINER, ruta).download_blob().readall()
+    return (UPLOADS_DIR / ruta).read_bytes()
+
+
 def preparar() -> None:
     """Crea el contenedor si aún no existe. Se llama una vez al arrancar.
 
