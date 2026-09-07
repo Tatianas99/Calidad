@@ -395,7 +395,7 @@ export default function F158Form({
               <h3 style={{ marginTop: 0 }}>¿Qué proceso vas a revisar?</h3>
               <div className="proc-grid">
                 {config.procesos.map((p) => (
-                  <button key={p.key} className="proc-btn" onClick={() => upd({ proceso: p.key, maquina: undefined })}>
+                  <button key={p.key} className="proc-btn" onClick={() => upd({ proceso: p.key, maquina: undefined, vals: {}, otros: {}, refIds: {}, prodTextos: {}, marcas: {} })}>
                     {p.label}
                   </button>
                 ))}
@@ -414,7 +414,7 @@ export default function F158Form({
               onAddFiles={(files) => addFiles(selected.localId, files)}
               onQuitarPend={(idx) => quitarPend(selected.localId, idx)}
               onGuardar={() => guardar(selected)}
-              onCambiarProceso={() => upd({ proceso: undefined, maquina: undefined })}
+              onCambiarProceso={() => upd({ proceso: undefined, maquina: undefined, vals: {}, otros: {}, refIds: {}, prodTextos: {}, marcas: {} })}
             />
           )}
         </section>
