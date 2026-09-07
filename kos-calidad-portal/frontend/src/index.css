@@ -193,6 +193,10 @@ textarea { min-height: 70px; resize: vertical; }
 /* Pie de tabla con paginación. */
 .tbl-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .pager { display: flex; align-items: center; gap: 10px; }
+/* Diálogo de descarga de PDF. */
+.pdf-modal { max-width: 360px; }
+.pdf-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-weight: 600; font-size: .9rem; }
+.pdf-field input { font: inherit; }
 /* Botón y tarjeta de "Máquina parada". */
 .btn-parada { background: var(--bad); color: #fff; border: 1px solid var(--bad); }
 .btn-parada:hover { filter: brightness(0.94); }

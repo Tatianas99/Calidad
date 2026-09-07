@@ -3,6 +3,7 @@ import { apiGet, apiSend } from '../lib/api'
 import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
+import PdfExport from '../components/PdfExport'
 import type { Referencia, Maquina, Persona, Opciones, F006Registro, Option } from '../lib/types'
 
 const label = (opts: Option[], v: string) => opts.find((o) => o.value === v)?.label ?? v
@@ -172,7 +173,10 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
       <div className="section-title">
         <span className="code">F-006</span>
         <h2>Registros de proceso vasos</h2>
-        <button className="btn btn-ghost" style={{ marginLeft: 'auto', minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <PdfExport formato="f006" />
+          <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        </div>
       </div>
       {cargando ? <p className="muted">Cargando…</p> : (
         <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} renderDetail={renderDetail} />

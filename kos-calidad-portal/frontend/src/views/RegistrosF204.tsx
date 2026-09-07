@@ -3,6 +3,7 @@ import { apiGet, apiSend } from '../lib/api'
 import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
+import PdfExport from '../components/PdfExport'
 import type { Referencia, Maquina, F204Registro } from '../lib/types'
 
 const fh = (iso: string) => {
@@ -100,7 +101,10 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
       <div className="section-title">
         <span className="code">F-204</span>
         <h2>Registros de Clase B y desperdicio</h2>
-        <button className="btn btn-ghost" style={{ marginLeft: 'auto', minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <PdfExport formato="f204" />
+          <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        </div>
       </div>
       {cargando ? <p className="muted">Cargando…</p> : (
         <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} renderDetail={renderDetail} />

@@ -4,6 +4,7 @@ import { getUser } from '../lib/auth'
 import { matchKeywords } from '../lib/fuzzy'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
+import PdfExport from '../components/PdfExport'
 import type { F158Config, F158Recorrido, F158Item } from '../lib/types'
 
 const fechaHora = (iso: string) => {
@@ -133,7 +134,10 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
       <div className="section-title">
         <span className="code">F-158</span>
         <h2>Registros de Rutas Calidad</h2>
-        <button className="btn btn-ghost" style={{ marginLeft: 'auto', minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <PdfExport formato="f158" />
+          <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        </div>
       </div>
       <div style={{ margin: '4px 0 12px' }}>
         <input

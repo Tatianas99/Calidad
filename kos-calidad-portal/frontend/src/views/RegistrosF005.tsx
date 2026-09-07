@@ -3,6 +3,7 @@ import { apiGet, apiSend } from '../lib/api'
 import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
+import PdfExport from '../components/PdfExport'
 import type { F005Registro } from '../lib/types'
 
 const fh = (iso: string) => {
@@ -108,7 +109,10 @@ export default function RegistrosF005({ onEditar, onBack }: { onEditar?: (id: st
       <div className="section-title">
         <span className="code">F-005</span>
         <h2>Registros de liberación de rollos</h2>
-        <button className="btn btn-ghost" style={{ marginLeft: 'auto', minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <PdfExport formato="f005" />
+          <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
+        </div>
       </div>
       {cargando ? <p className="muted">Cargando…</p> : (
         <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} renderDetail={renderDetail} />
