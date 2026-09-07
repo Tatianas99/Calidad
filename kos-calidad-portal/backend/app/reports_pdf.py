@@ -104,11 +104,11 @@ def _tabla_resumen(header, rows):
     return t
 
 
-def _mini(header, rows):
+def _mini(header, rows, colWidths=None):
     data = [[Paragraph(_esc(h), _S["cellh"]) for h in header]]
     for r in rows:
         data.append([Paragraph(_esc(c), _S["cell"]) for c in r])
-    t = Table(data, repeatRows=1, hAlign="LEFT")
+    t = Table(data, repeatRows=1, hAlign="LEFT", colWidths=colWidths)
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#475569")),
         ("GRID", (0, 0), (-1, -1), 0.4, LINE),
@@ -220,7 +220,7 @@ def _f006(db, desde, hasta):
         for x in sorted(r.filtraciones, key=lambda z: z.hora_montaje):
             hh = x.hora_montaje.strftime("%H:%M")
             if getattr(x, "maquina_parada", False):
-                prows.append([hh, "⛔ Máquina parada", "", "", "", x.comentario or ""])
+                prows.append([hh, "⛔ Máquina parada", "", "", "", "", "", x.comentario or ""])
                 continue
             extra = []
             if x.temp_90:
@@ -229,12 +229,19 @@ def _f006(db, desde, hasta):
                 extra.append(f"Goteo:{x.goteo_vaso_tapa}")
             if x.tapa_centrada:
                 extra.append(f"Tapa:{x.tapa_centrada}")
+            cum = x.cantidad_cumple if x.cantidad_cumple is not None else None
+            ncmp = x.cantidad_nocumple if x.cantidad_nocumple is not None else None
+            mu = x.cantidad_muestra or 0
+            pct = f"{round(ncmp / mu * 100, 1)}%" if (ncmp is not None and mu) else "—"
             prows.append([hh, _PRUEBA.get(x.tipo_prueba, x.tipo_prueba or ""), _MATERIAL.get(x.tipo_material, x.tipo_material or ""),
-                          f"{x.cantidad_cumple if x.cantidad_cumple is not None else '—'}/{x.cantidad_nocumple if x.cantidad_nocumple is not None else '—'}",
+                          "—" if cum is None else str(cum), "—" if ncmp is None else str(ncmp), pct,
                           " ".join(extra), x.comentario or ""])
         tablas = []
         if prows:
-            tablas.append(_mini(["Hora", "Prueba", "Papel", "Cumple/NC", "Chequeos", "Comentario"], prows))
+            tablas.append(_mini(
+                ["Hora", "Prueba", "Papel", "Cumple", "No cumple", "% NC", "Chequeos", "Comentario"], prows,
+                colWidths=[12 * mm, 25 * mm, 13 * mm, 14 * mm, 16 * mm, 12 * mm, 30 * mm, 48 * mm],
+            ))
         firmas = f"Operario: {r.operario_nombre or '—'} · Empacador: {r.empacador_nombre or '—'} · Auxiliar: {r.auxiliar_nombre or '—'}"
         detalles.append(_bloque(
             _ref_txt(r, ref) or "Producto",
