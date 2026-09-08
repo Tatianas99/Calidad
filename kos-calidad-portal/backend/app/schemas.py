@@ -455,3 +455,4 @@ class FichaTecnicaOut(BaseModel):
 
 class FichaTecnicaUpdate(BaseModel):
     referencia: str
+    categoria: Optional[str] = None
