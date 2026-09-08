@@ -456,3 +456,7 @@ class FichaTecnicaOut(BaseModel):
 class FichaTecnicaUpdate(BaseModel):
     referencia: str
     categoria: Optional[str] = None
+    diam_inferior: Optional[str] = None
+    rim: Optional[str] = None
+    diam_exterior: Optional[str] = None
+    altura: Optional[str] = None

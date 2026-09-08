@@ -34,8 +34,10 @@ def editar_ficha(
     if not f:
         raise HTTPException(status_code=404, detail="Ficha no encontrada")
     f.referencia = data.referencia.strip()
-    if data.categoria is not None:
-        f.categoria = data.categoria.strip()
+    for campo in ("categoria", "diam_inferior", "rim", "diam_exterior", "altura"):
+        val = getattr(data, campo)
+        if val is not None:
+            setattr(f, campo, val.strip())
     db.commit()
     db.refresh(f)
     return f
