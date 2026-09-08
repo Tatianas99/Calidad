@@ -34,6 +34,16 @@ export default function FichasTecnicas() {
     }
   }
 
+  async function borrar(f: Ficha) {
+    if (!window.confirm(`¿Borrar la ficha técnica "${f.referencia}"? Dejará de aparecer en la lista.`)) return
+    try {
+      await apiSend('DELETE', `/catalogos/fichas/${f.id}`)
+      setFichas((fs) => fs.filter((x) => x.id !== f.id))
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'No se pudo borrar')
+    }
+  }
+
   const filtradas = useMemo(
     () => fichas.filter((f) => matchKeywords(q, `${f.referencia} ${f.categoria} ${f.codigo}`)),
     [fichas, q],
@@ -99,6 +109,7 @@ export default function FichasTecnicas() {
                     {f.archivo
                       ? <button className="btn btn-ghost pill-btn" title="Ver ficha técnica" onClick={() => abrir(f)}>🔍</button>
                       : <span className="muted">—</span>}
+                    {admin && <button className="btn btn-ghost pill-btn" title="Borrar ficha" onClick={() => borrar(f)} style={{ marginLeft: 4 }}>🗑️</button>}
                   </td>
                 </tr>
               ))}

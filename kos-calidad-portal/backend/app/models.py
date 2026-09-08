@@ -316,3 +316,4 @@ class FichaTecnica(Base):
     altura: Mapped[Optional[str]] = mapped_column(String(40))
     archivo: Mapped[Optional[str]] = mapped_column(String(200))
     orden: Mapped[int] = mapped_column(Integer, default=0)            # orden de despliegue
+    activo: Mapped[bool] = mapped_column(Boolean, default=True)       # borrado lógico (admin)

@@ -110,6 +110,8 @@ def init_db():
     _make_nullable("f006_filtracion", "tipo_prueba", "NVARCHAR(30)")
     _make_nullable("f006_filtracion", "tipo_material", "NVARCHAR(20)")
     _make_nullable("f006_filtracion", "cantidad_muestra", "INT")
+    # Fichas técnicas: borrado lógico (admin).
+    _ensure_columns("ficha_tecnica", [("activo", "BOOLEAN", "BIT NOT NULL DEFAULT 1")])
     # Firmas F-006 en texto (buscar o escribir si no está en la lista).
     _ensure_columns("f006_registro", [
         ("operario_nombre", "VARCHAR(120)", "NVARCHAR(120) NULL"),

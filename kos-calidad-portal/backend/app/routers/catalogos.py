@@ -19,7 +19,9 @@ router = APIRouter(prefix="/catalogos", tags=["Catálogos"])
 @router.get("/fichas", response_model=list[schemas.FichaTecnicaOut])
 def fichas_tecnicas(db: Session = Depends(get_db)):
     """Base de datos de fichas técnicas (medidas + enlace al PDF/archivo)."""
-    return db.query(models.FichaTecnica).order_by(models.FichaTecnica.orden).all()
+    return (db.query(models.FichaTecnica)
+            .filter(models.FichaTecnica.activo == True)
+            .order_by(models.FichaTecnica.orden).all())
 
 
 @router.put("/fichas/{ficha_id}", response_model=schemas.FichaTecnicaOut)
@@ -35,6 +37,18 @@ def editar_ficha(
     db.commit()
     db.refresh(f)
     return f
+
+
+@router.delete("/fichas/{ficha_id}", status_code=204)
+def borrar_ficha(
+    ficha_id: str,
+    _admin: models.Usuario = Depends(require_admin), db: Session = Depends(get_db),
+):
+    """Borra (lógicamente) una ficha técnica. Solo admin. No reaparece al reiniciar."""
+    f = db.get(models.FichaTecnica, ficha_id)
+    if f:
+        f.activo = False
+        db.commit()
 
 
 @router.get("/personas", response_model=list[schemas.PersonaOut])
