@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, date, time
 from typing import Optional, List
 
-from sqlalchemy import String, Integer, Boolean, Date, DateTime, Float, ForeignKey, Time
+from sqlalchemy import String, Integer, Boolean, Date, DateTime, Float, ForeignKey, Time, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -317,3 +317,20 @@ class FichaTecnica(Base):
     archivo: Mapped[Optional[str]] = mapped_column(String(200))
     orden: Mapped[int] = mapped_column(Integer, default=0)            # orden de despliegue
     activo: Mapped[bool] = mapped_column(Boolean, default=True)       # borrado lógico (admin)
+
+
+class BorradorTurno(Base):
+    """Borrador de trabajo (la "lista del turno") de un formato, por usuario.
+
+    Guarda el estado del formulario en JSON (`contenido`) para que la MISMA
+    cuenta pueda continuar su turno desde cualquier dispositivo. Es privado:
+    solo el propio usuario lo lee y lo escribe (se filtra por `usuario_id` en el
+    servidor), así que otras cuentas no ven lo que uno está capturando.
+
+    `clave` identifica el formato/borrador (p. ej. 'draft_f006_v3').
+    """
+    __tablename__ = "borrador_turno"
+    usuario_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    clave: Mapped[str] = mapped_column(String(60), primary_key=True)
+    contenido: Mapped[str] = mapped_column(Text, default="")           # estado en JSON
+    actualizado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co, onupdate=now_co)

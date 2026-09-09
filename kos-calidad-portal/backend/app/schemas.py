@@ -1,6 +1,6 @@
 """Schemas Pydantic (validación de entrada/salida de la API)."""
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -460,3 +460,15 @@ class FichaTecnicaUpdate(BaseModel):
     rim: Optional[str] = None
     diam_exterior: Optional[str] = None
     altura: Optional[str] = None
+
+
+# --------------------------------------------------------------------------- #
+# Borrador de trabajo (lista del turno) por usuario
+# --------------------------------------------------------------------------- #
+class BorradorIn(BaseModel):
+    contenido: Any = None          # estado del formulario (JSON arbitrario)
+
+
+class BorradorOut(BaseModel):
+    clave: str
+    contenido: Any = None

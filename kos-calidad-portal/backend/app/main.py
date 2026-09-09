@@ -17,7 +17,7 @@ from .personal import sync_personas
 from .referencias_sync import sync_referencias
 from .maquinas_sync import sync_maquinas
 from .seed import seed_admin
-from .routers import catalogos, catalogo_op, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios, proveedores, puntos, dashboard, turnos
+from .routers import catalogos, catalogo_op, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios, proveedores, puntos, dashboard, turnos, borradores
 
 log = logging.getLogger("uvicorn.error")
 
@@ -93,6 +93,7 @@ app.include_router(f158.router, dependencies=_auth)
 app.include_router(f204.router, dependencies=_auth)
 app.include_router(reports.router, dependencies=_auth)
 app.include_router(dashboard.router, dependencies=_auth)
+app.include_router(borradores.router, dependencies=_auth)
 app.include_router(usuarios.router)  # ya exige permiso gestionar_usuarios internamente
 app.include_router(proveedores.router)  # idem (configuración, solo admin)
 app.include_router(puntos.router)  # idem

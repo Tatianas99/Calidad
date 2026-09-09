@@ -103,6 +103,34 @@ export async function apiSend<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', pa
   return (text ? JSON.parse(text) : null) as T
 }
 
+// --------------------------------------------------------------------------- //
+// Borrador de trabajo (lista del turno) sincronizado por usuario.
+// El servidor lo asocia al usuario en sesión (privado). Estas dos llamadas son
+// "silenciosas": si no hay conexión no lanzan error (el borrador queda en
+// localStorage y se sube en el siguiente cambio con internet).
+// --------------------------------------------------------------------------- //
+export async function getBorrador<T>(clave: string): Promise<T | null> {
+  // Lanza si hay error de red/servidor (para NO sobrescribir el borrador remoto
+  // con lo local); devuelve null solo cuando el usuario aún no tiene borrador.
+  const res = await fetch(API + '/borradores/' + encodeURIComponent(clave), { headers: authHeaders() })
+  if (res.status === 401) { triggerUnauthorized(); throw new Error('No autenticado') }
+  if (!res.ok) throw new Error(`GET borrador -> ${res.status}`)
+  const j = await res.json()
+  return (j?.contenido ?? null) as T | null
+}
+
+export async function putBorrador(clave: string, contenido: unknown): Promise<void> {
+  try {
+    await fetch(API + '/borradores/' + encodeURIComponent(clave), {
+      method: 'PUT',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ contenido }),
+    })
+  } catch {
+    /* sin conexión: el borrador permanece en localStorage */
+  }
+}
+
 export function startSync() {
   const tick = () => processQueue(API)
   window.addEventListener('online', tick)
