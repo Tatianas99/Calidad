@@ -47,6 +47,7 @@ type Producto = {
   filtraciones: LocalFiltracion[]
   operario?: string    // buscar o escribir
   empacador?: string   // buscar o escribir
+  empacador2?: string  // 2° empacador (opcional; a veces hay más de 2 personas)
   createdAt: number
 }
 type State = {
@@ -127,6 +128,7 @@ export default function F006Form({
     })).reverse(),  // más recientes arriba
     operario: r.operario_nombre ?? (r.operario_id ? personas.find((p) => p.id === r.operario_id)?.nombre : undefined),
     empacador: r.empacador_nombre ?? (r.empacador_id ? personas.find((p) => p.id === r.empacador_id)?.nombre : undefined),
+    empacador2: r.empacador2_nombre ?? undefined,
     createdAt: Date.now(),
   })
 
@@ -277,6 +279,7 @@ export default function F006Form({
     if (!p.guardado) await maybeGuardarCabecera(p)
     const r = await apiMutate('PUT', `/f006/registros/${prodId}/firmas`, {
       operario_nombre: p.operario ?? null, empacador_nombre: p.empacador ?? null,
+      empacador2_nombre: p.empacador2 ?? null,
     })
     // Al finalizar, el producto se retira de la lista de activos del turno
     // (ya quedó guardado; se consulta en "Ver registros F-006").
@@ -565,6 +568,14 @@ function ProductoDetalle({
                 placeholder="Buscar o escribir empacador…"
               />
             </Field>
+            <Field label="Empacador(a) 2" hint="opcional · si hay más de una persona empacando">
+              <ComboBox
+                options={personas.map((p) => p.nombre)}
+                value={prod.empacador2 ?? ''}
+                onChange={(v) => onFirmas({ empacador2: v })}
+                placeholder="Buscar o escribir empacador…"
+              />
+            </Field>
           </div>
 
           {faltantesEmb.length > 0 && (
@@ -667,6 +678,7 @@ function FiltracionCard({
 
   const prueba = opts ? labelOf(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba
   const material = opts ? labelOf(opts.tipos_material_f006, f.tipo_material) : f.tipo_material
+  const esRasgado = f.tipo_prueba === 'rasgado'  // no lleva preguntas de tapa
 
   // Entrada de "Máquina parada": solo observaciones.
   if (f.maquina_parada) {
@@ -727,19 +739,28 @@ function FiltracionCard({
           {excede && (
             <p className="tag-bad">La cantidad que cumple no puede ser mayor a la muestra ({f.cantidad_muestra}).</p>
           )}
-          <div className="check-row">
-            <span className="label">Goteo de vaso con tapa</span>
-            <OptionButtons options={resOpts} value={goteo} onChange={setGoteo} />
-          </div>
-          <div className="check-row">
-            <span className="label">Tapa centrada</span>
-            <OptionButtons options={resOpts} value={tapa} onChange={setTapa} />
-          </div>
-          <Field label="Comentario">
+          {/* La prueba de rasgado no lleva las preguntas de la tapa: solo cumple y observaciones. */}
+          {!esRasgado && (
+            <>
+              <div className="check-row">
+                <span className="label">Goteo de vaso con tapa</span>
+                <OptionButtons options={resOpts} value={goteo} onChange={setGoteo} />
+              </div>
+              <div className="check-row">
+                <span className="label">Tapa centrada</span>
+                <OptionButtons options={resOpts} value={tapa} onChange={setTapa} />
+              </div>
+            </>
+          )}
+          <Field label={esRasgado ? 'Observaciones' : 'Comentario'}>
             <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} />
           </Field>
-          {(!goteo || !tapa) && <p className="hint">Selecciona Goteo de vaso con tapa y Tapa centrada.</p>}
-          <button className="btn btn-primary" disabled={invalido || !goteo || !tapa} onClick={() => onResultado(f, Number(cumple), goteo, tapa, comentario)}>
+          {!esRasgado && (!goteo || !tapa) && <p className="hint">Selecciona Goteo de vaso con tapa y Tapa centrada.</p>}
+          <button
+            className="btn btn-primary"
+            disabled={invalido || (!esRasgado && (!goteo || !tapa))}
+            onClick={() => onResultado(f, Number(cumple), esRasgado ? '' : goteo, esRasgado ? '' : tapa, comentario)}
+          >
             Registrar resultado
           </button>
         </>

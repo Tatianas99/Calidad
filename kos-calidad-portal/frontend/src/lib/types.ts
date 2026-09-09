@@ -55,6 +55,7 @@ export type F006Registro = {
   operario_nombre?: string | null
   empacador_id?: number | null
   empacador_nombre?: string | null
+  empacador2_nombre?: string | null
   registrado_por_id?: number | null
   creado_en: string
   embalaje: { item: string; resultado: string }[]

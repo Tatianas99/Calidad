@@ -242,7 +242,8 @@ def _f006(db, desde, hasta):
                 ["Hora", "Prueba", "Papel", "Cumple", "No cumple", "% NC", "Chequeos", "Comentario"], prows,
                 colWidths=[12 * mm, 25 * mm, 13 * mm, 14 * mm, 16 * mm, 12 * mm, 30 * mm, 48 * mm],
             ))
-        firmas = f"Operario: {r.operario_nombre or '—'} · Empacador: {r.empacador_nombre or '—'} · Auxiliar: {r.auxiliar_nombre or '—'}"
+        _emp = (r.empacador_nombre or "—") + (f" y {r.empacador2_nombre}" if r.empacador2_nombre else "")
+        firmas = f"Operario: {r.operario_nombre or '—'} · Empacador: {_emp} · Auxiliar: {r.auxiliar_nombre or '—'}"
         detalles.append(_bloque(
             _ref_txt(r, ref) or "Producto",
             f"OP {r.orden_produccion or '—'} · {_maq_txt(r, maq) or 'Sin máquina'} · {('T'+str(r.turno)) if r.turno else 'sin turno'} · {f} {h}",
