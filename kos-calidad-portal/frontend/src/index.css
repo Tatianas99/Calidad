@@ -215,11 +215,13 @@ textarea { min-height: 70px; resize: vertical; }
 .f006-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
 @media (max-width: 760px) {
   .f006-layout { grid-template-columns: 1fr; }
-  /* En una sola columna la barra no debe fijarse: el desglase queda arriba con
-     scroll propio y el formulario debajo permanece quieto. */
-  .side { position: static; }
-  .side .prod-list { max-height: 46vh; }
-  .side .saved-list { max-height: 30vh; }
+  /* En una sola columna la barra NO debe fijarse (si no, tapa el formulario y
+     éste se desplaza por debajo). Se usa el selector .f006-layout .side para
+     ganar en especificidad a la regla base ".side{position:sticky}" que aparece
+     más abajo en el archivo (misma especificidad -> ganaría la última si no). */
+  .f006-layout .side { position: static; top: auto; }
+  .f006-layout .side .prod-list { max-height: 46vh; }
+  .f006-layout .side .saved-list { max-height: 30vh; }
 }
 
 /* Pestañas dentro del producto */
