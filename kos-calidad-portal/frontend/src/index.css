@@ -213,7 +213,14 @@ textarea { min-height: 70px; resize: vertical; }
 
 /* ---- Layout de dos paneles (F-006 turno) ---- */
 .f006-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
-@media (max-width: 760px) { .f006-layout { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .f006-layout { grid-template-columns: 1fr; }
+  /* En una sola columna la barra no debe fijarse: el desglase queda arriba con
+     scroll propio y el formulario debajo permanece quieto. */
+  .side { position: static; }
+  .side .prod-list { max-height: 46vh; }
+  .side .saved-list { max-height: 30vh; }
+}
 
 /* Pestañas dentro del producto */
 .tabbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -240,7 +247,7 @@ textarea { min-height: 70px; resize: vertical; }
 }
 .side .add:active { transform: scale(.99); }
 .side h4 { margin: 4px 4px 8px; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-.prod-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.prod-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; overscroll-behavior: contain; }
 .prod-item {
   text-align: left; border: 1px solid var(--border); background: var(--surface-2);
   border-radius: 9px; padding: 7px 26px 7px 10px; cursor: pointer; font: inherit; color: inherit; position: relative;
@@ -551,7 +558,10 @@ textarea { min-height: 70px; resize: vertical; }
   letter-spacing: .04em; color: var(--muted); cursor: pointer; user-select: none;
 }
 .saved-div .saved-line { flex: 1; height: 1px; background: var(--border); }
-.saved-list { display: flex; flex-direction: column; gap: 6px; max-height: 34vh; overflow-y: auto; }
+.saved-list { display: flex; flex-direction: column; gap: 6px; max-height: 34vh; overflow-y: auto; overscroll-behavior: contain; }
+/* Lista con scroll propio (p. ej. "Mediciones de hoy" en F-015): al deslizar
+   sobre ella no arrastra la página ni el formulario de arriba. */
+.scroll-list { max-height: 55vh; overflow-y: auto; overscroll-behavior: contain; }
 .saved-item {
   display: flex; justify-content: space-between; align-items: center; gap: 6px;
   border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px; padding: 8px 10px;

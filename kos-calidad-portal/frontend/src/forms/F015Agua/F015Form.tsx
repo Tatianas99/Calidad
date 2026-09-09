@@ -141,18 +141,20 @@ export default function F015Form({
       <div className="panel">
         <h3>Mediciones de hoy ({lista.length})</h3>
         {lista.length === 0 && <p className="muted">Aún no hay mediciones registradas hoy.</p>}
-        {lista.map((m) => (
-          <div className="list-item" key={m.id}>
-            <div>
-              <strong>{m.punto_texto || nombrePunto(m.punto_medicion_id)}</strong>
-              <div className="muted">{new Date(m.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
+        <div className="scroll-list">
+          {lista.map((m) => (
+            <div className="list-item" key={m.id}>
+              <div>
+                <strong>{m.punto_texto || nombrePunto(m.punto_medicion_id)}</strong>
+                <div className="muted">{new Date(m.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div className={m.ph_en_rango ? 'tag-ok' : 'tag-bad'}>PH {m.ph}</div>
+                <div className={m.cloro_en_rango ? 'tag-ok' : 'tag-bad'}>Cloro {m.cloro}</div>
+              </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div className={m.ph_en_rango ? 'tag-ok' : 'tag-bad'}>PH {m.ph}</div>
-              <div className={m.cloro_en_rango ? 'tag-ok' : 'tag-bad'}>Cloro {m.cloro}</div>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {msg && <div className="toast">{msg}</div>}
