@@ -17,6 +17,7 @@ TIPOS_PRUEBA_F006 = [
     ("agua_fria", "Agua fría"),
     ("rojo_escarlata", "Rojo escarlata"),
     ("glicerina", "Glicerina"),
+    ("rasgado", "Rasgado"),
 ]
 
 # F-006 — tipo de papel (misma lista estándar de "Tipo de material" de F-158).
