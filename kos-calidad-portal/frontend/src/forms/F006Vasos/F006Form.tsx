@@ -685,6 +685,21 @@ function FiltracionCard({
   const esPortaPapa = /porta[\s-]*papas?/.test((productoLabel || '').toLowerCase())
   const ocultarTapa = esRasgado && esPortaPapa
 
+  // Edición de un resultado ya registrado (antes de finalizar el producto).
+  const [editando, setEditando] = useState(false)
+  const enEdicion = f.estado === 'en_proceso' || editando
+  const iniciarEdicion = () => {
+    setCumple(f.cantidad_cumple != null ? String(f.cantidad_cumple) : '')
+    setGoteo(f.goteo_vaso_tapa || '')
+    setTapa(f.tapa_centrada || '')
+    setComentario(f.comentario || '')
+    setEditando(true)
+  }
+  const guardar = () => {
+    onResultado(f, Number(cumple), ocultarTapa ? '' : goteo, ocultarTapa ? '' : tapa, comentario)
+    setEditando(false)
+  }
+
   // Entrada de "Máquina parada": solo observaciones.
   if (f.maquina_parada) {
     return (
@@ -696,17 +711,23 @@ function FiltracionCard({
           </span>
         </div>
         <p className="muted" style={{ margin: '0 0 8px' }}>Registrada a las {hhmm(f.montadaEnMs)}</p>
-        {f.estado === 'en_proceso' ? (
+        {enEdicion ? (
           <>
             <Field label="Observaciones">
               <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} />
             </Field>
-            <button className="btn btn-primary" onClick={() => onResultado(f, 0, '', '', comentario)}>
-              Registrar resultado
-            </button>
+            <div className="btn-row">
+              <button className="btn btn-primary" onClick={() => { onResultado(f, 0, '', '', comentario); setEditando(false) }}>
+                {f.estado === 'en_proceso' ? 'Registrar resultado' : 'Guardar cambios'}
+              </button>
+              {editando && <button className="btn btn-ghost" onClick={() => setEditando(false)}>Cancelar</button>}
+            </div>
           </>
         ) : (
-          <p style={{ margin: 0 }} className="muted">{f.comentario || 'Sin observaciones.'}</p>
+          <>
+            <p style={{ margin: '0 0 8px' }} className="muted">{f.comentario || 'Sin observaciones.'}</p>
+            <button className="btn btn-ghost pill-btn" onClick={iniciarEdicion}>✏️ Editar</button>
+          </>
         )}
       </div>
     )
@@ -724,11 +745,13 @@ function FiltracionCard({
         Montada a las {hhmm(f.montadaEnMs)} · Muestra: {f.cantidad_muestra}
       </p>
 
-      {f.estado === 'en_proceso' ? (
+      {enEdicion ? (
         <>
-          <p className={'timer' + (listo ? ' ready' : '')}>
-            {listo ? 'Muestra lista (20 min cumplidos)' : `Faltan ${mm}:${String(ss).padStart(2, '0')} para leer`}
-          </p>
+          {f.estado === 'en_proceso' && (
+            <p className={'timer' + (listo ? ' ready' : '')}>
+              {listo ? 'Muestra lista (20 min cumplidos)' : `Faltan ${mm}:${String(ss).padStart(2, '0')} para leer`}
+            </p>
+          )}
           <div className="row">
             <Field label="Cumple (no filtra)" hint={`máximo ${f.cantidad_muestra}`}>
               <input
@@ -762,23 +785,29 @@ function FiltracionCard({
             <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} />
           </Field>
           {!ocultarTapa && (!goteo || !tapa) && <p className="hint">Selecciona Goteo de vaso con tapa y Tapa centrada.</p>}
-          <button
-            className="btn btn-primary"
-            disabled={invalido || (!ocultarTapa && (!goteo || !tapa))}
-            onClick={() => onResultado(f, Number(cumple), ocultarTapa ? '' : goteo, ocultarTapa ? '' : tapa, comentario)}
-          >
-            Registrar resultado
-          </button>
+          <div className="btn-row">
+            <button
+              className="btn btn-primary"
+              disabled={invalido || (!ocultarTapa && (!goteo || !tapa))}
+              onClick={guardar}
+            >
+              {f.estado === 'en_proceso' ? 'Registrar resultado' : 'Guardar cambios'}
+            </button>
+            {editando && <button className="btn btn-ghost" onClick={() => setEditando(false)}>Cancelar</button>}
+          </div>
         </>
       ) : (
-        <p style={{ margin: 0 }}>
-          <span className="tag-ok">Cumple: {f.cantidad_cumple}</span>{' · '}
-          <span className="tag-bad">No cumple: {f.cantidad_nocumple}</span>
-          {(f.goteo_vaso_tapa || f.tapa_centrada) && (
-            <><br /><span className="muted">Goteo: {f.goteo_vaso_tapa || '—'} · Tapa centrada: {f.tapa_centrada || '—'}</span></>
-          )}
-          {f.comentario ? <><br /><span className="muted">{f.comentario}</span></> : null}
-        </p>
+        <>
+          <p style={{ margin: 0 }}>
+            <span className="tag-ok">Cumple: {f.cantidad_cumple}</span>{' · '}
+            <span className="tag-bad">No cumple: {f.cantidad_nocumple}</span>
+            {(f.goteo_vaso_tapa || f.tapa_centrada) && (
+              <><br /><span className="muted">Goteo: {f.goteo_vaso_tapa || '—'} · Tapa centrada: {f.tapa_centrada || '—'}</span></>
+            )}
+            {f.comentario ? <><br /><span className="muted">{f.comentario}</span></> : null}
+          </p>
+          <button className="btn btn-ghost pill-btn" style={{ marginTop: 8 }} onClick={iniciarEdicion}>✏️ Editar</button>
+        </>
       )}
     </div>
   )
