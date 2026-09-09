@@ -726,7 +726,9 @@ function FiltracionCard({
         ) : (
           <>
             <p style={{ margin: '0 0 8px' }} className="muted">{f.comentario || 'Sin observaciones.'}</p>
-            <button className="btn btn-ghost pill-btn" onClick={iniciarEdicion}>✏️ Editar</button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost pill-btn" style={{ fontWeight: 800 }} onClick={iniciarEdicion}>✏️ Editar</button>
+            </div>
           </>
         )}
       </div>
@@ -806,7 +808,9 @@ function FiltracionCard({
             )}
             {f.comentario ? <><br /><span className="muted">{f.comentario}</span></> : null}
           </p>
-          <button className="btn btn-ghost pill-btn" style={{ marginTop: 8 }} onClick={iniciarEdicion}>✏️ Editar</button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+            <button className="btn btn-ghost pill-btn" style={{ fontWeight: 800 }} onClick={iniciarEdicion}>✏️ Editar</button>
+          </div>
         </>
       )}
     </div>
