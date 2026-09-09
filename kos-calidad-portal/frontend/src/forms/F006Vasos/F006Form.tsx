@@ -678,7 +678,12 @@ function FiltracionCard({
 
   const prueba = opts ? labelOf(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba
   const material = opts ? labelOf(opts.tipos_material_f006, f.tipo_material) : f.tipo_material
-  const esRasgado = f.tipo_prueba === 'rasgado'  // no lleva preguntas de tapa
+  // Las preguntas de la tapa se omiten solo cuando el producto es "porta papa"
+  // (no tiene tapa) Y la prueba es de rasgado. En cualquier otro producto, la
+  // prueba de rasgado sí pide la información de la tapa.
+  const esRasgado = f.tipo_prueba === 'rasgado'
+  const esPortaPapa = /porta[\s-]*papas?/.test((productoLabel || '').toLowerCase())
+  const ocultarTapa = esRasgado && esPortaPapa
 
   // Entrada de "Máquina parada": solo observaciones.
   if (f.maquina_parada) {
@@ -739,8 +744,9 @@ function FiltracionCard({
           {excede && (
             <p className="tag-bad">La cantidad que cumple no puede ser mayor a la muestra ({f.cantidad_muestra}).</p>
           )}
-          {/* La prueba de rasgado no lleva las preguntas de la tapa: solo cumple y observaciones. */}
-          {!esRasgado && (
+          {/* Rasgado en producto "porta papa" (sin tapa): no lleva preguntas de tapa,
+              solo cumple y observaciones. En otros productos, rasgado sí las pide. */}
+          {!ocultarTapa && (
             <>
               <div className="check-row">
                 <span className="label">Goteo de vaso con tapa</span>
@@ -752,14 +758,14 @@ function FiltracionCard({
               </div>
             </>
           )}
-          <Field label={esRasgado ? 'Observaciones' : 'Comentario'}>
+          <Field label={ocultarTapa ? 'Observaciones' : 'Comentario'}>
             <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} />
           </Field>
-          {!esRasgado && (!goteo || !tapa) && <p className="hint">Selecciona Goteo de vaso con tapa y Tapa centrada.</p>}
+          {!ocultarTapa && (!goteo || !tapa) && <p className="hint">Selecciona Goteo de vaso con tapa y Tapa centrada.</p>}
           <button
             className="btn btn-primary"
-            disabled={invalido || (!esRasgado && (!goteo || !tapa))}
-            onClick={() => onResultado(f, Number(cumple), esRasgado ? '' : goteo, esRasgado ? '' : tapa, comentario)}
+            disabled={invalido || (!ocultarTapa && (!goteo || !tapa))}
+            onClick={() => onResultado(f, Number(cumple), ocultarTapa ? '' : goteo, ocultarTapa ? '' : tapa, comentario)}
           >
             Registrar resultado
           </button>
