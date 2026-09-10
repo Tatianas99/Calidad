@@ -3,7 +3,7 @@
 Fecha/hora las fija el servidor. Responsable = usuario en sesión.
 Editar y borrar registros: solo admin.
 """
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from .. import models, schemas
 from ..auth import get_current_user, require_admin
-from ..timeutil import fecha_fields
+from ..timeutil import fecha_fields, now_co
 
 router = APIRouter(prefix="/f005", tags=["F-005 Liberación de rollos"])
 
@@ -55,6 +55,7 @@ def crear_registro(
 def listar_registros(
     fecha: Optional[date] = None,
     mios: bool = False,
+    recientes_horas: Optional[int] = None,
     user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -63,6 +64,9 @@ def listar_registros(
         q = q.filter(models.F005Registro.fecha == fecha)
     if mios:
         q = q.filter(models.F005Registro.responsable_id == user.id)
+    if recientes_horas:
+        # Registrados en las últimas N horas (ventana para reabrir/editar).
+        q = q.filter(models.F005Registro.creado_en >= now_co() - timedelta(hours=recientes_horas))
     return q.order_by(models.F005Registro.creado_en.desc()).all()
 
 

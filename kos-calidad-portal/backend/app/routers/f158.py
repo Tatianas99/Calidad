@@ -6,7 +6,7 @@ según el proceso elegido, definido en constants_f158.py.
 """
 import base64
 import uuid as _uuidlib
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -55,10 +55,12 @@ def listar_recorridos(
     fecha: Optional[date] = None,
     proceso: Optional[str] = None,
     mios: bool = False,
+    recientes_horas: Optional[int] = None,
     user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Lista recorridos. `mios=true` limita a los del usuario actual (panel lateral)."""
+    """Lista recorridos. `mios=true` limita a los del usuario actual (panel lateral);
+    `recientes_horas=N` limita a los registrados en las últimas N horas."""
     q = db.query(models.F158Recorrido).options(
         selectinload(models.F158Recorrido.items),
         selectinload(models.F158Recorrido.adjuntos),
@@ -69,6 +71,8 @@ def listar_recorridos(
         q = q.filter(models.F158Recorrido.proceso == proceso)
     if mios:
         q = q.filter(models.F158Recorrido.responsable_id == user.id)
+    if recientes_horas:
+        q = q.filter(models.F158Recorrido.creado_en >= now_co() - timedelta(hours=recientes_horas))
     regs = q.order_by(models.F158Recorrido.creado_en.desc()).all()
     return [_out(r) for r in regs]
 

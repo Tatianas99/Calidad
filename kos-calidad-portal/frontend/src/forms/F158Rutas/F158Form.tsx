@@ -152,7 +152,7 @@ export default function F158Form({
   const [st, setSt] = useDraft<State>('draft_f158_v1', { entradas: [] })
 
   const cargarGuardados = () =>
-    apiGet<F158Recorrido[]>(`/f158/recorridos?mios=true&fecha=${hoy()}`).then(setGuardados).catch(() => {})
+    apiGet<F158Recorrido[]>(`/f158/recorridos?mios=true&recientes_horas=18`).then(setGuardados).catch(() => {})
 
   useEffect(() => {
     apiGet<F158Config>('/f158/config').then(setConfig).catch(() => {})
@@ -354,7 +354,7 @@ export default function F158Form({
           </div>
 
           <div className="saved-div" onClick={() => setVerGuardados((v) => !v)}>
-            <span>{verGuardados ? '▾' : '▸'} Guardados hoy ({guardados.length})</span>
+            <span>{verGuardados ? '▾' : '▸'} Guardados (18 h) ({guardados.length})</span>
             <span className="saved-line" />
           </div>
           {verGuardados && (
@@ -365,7 +365,7 @@ export default function F158Form({
                 value={busqGuardados}
                 onChange={(e) => setBusqGuardados(e.target.value)}
               />
-              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Aún no has guardado recorridos hoy.</p>}
+              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin recorridos guardados en las últimas 18 h.</p>}
               {guardados.length > 0 && guardadosFiltrados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin coincidencias.</p>}
               {guardadosFiltrados.map((r) => (
                 <div key={r.id} className="saved-item">

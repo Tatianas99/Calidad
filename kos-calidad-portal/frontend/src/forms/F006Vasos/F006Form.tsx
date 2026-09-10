@@ -74,7 +74,7 @@ export default function F006Form({
   const [msg, setMsg] = useState('')
   const [now, setNow] = useState(Date.now())
   const [busqProductos, setBusqProductos] = useState('')
-  // Recuperar registros ya finalizados de las últimas 8 horas.
+  // Recuperar registros ya finalizados de las últimas 18 horas.
   const [finalizados, setFinalizados] = useState<F006Registro[]>([])
   const [verRecuperar, setVerRecuperar] = useState(false)
   // La lista se puede contraer (en móvil arranca contraída para no saturar).
@@ -296,7 +296,7 @@ export default function F006Form({
     matchKeywords(busqProductos, `${prodLabel(p)} ${p.maquina ?? ''}`))
 
   // Recuperar finalizados: carga hoy + ayer (cubre turno nocturno) y deja solo
-  // los que tienen firmas (finalizados) creados en las últimas 8 horas.
+  // los que tienen firmas (finalizados) creados en las últimas 18 horas.
   const cargarFinalizados = () => {
     const f = (x: Date) => x.toISOString().slice(0, 10)
     const ayer = new Date(Date.now() - 24 * 3600 * 1000)
@@ -307,11 +307,11 @@ export default function F006Form({
   }
   const labelReg = (r: F006Registro) =>
     (r.referencia_texto || (r.referencia_id ? refLabel(r.referencia_id) : '') || 'Producto') + (r.marca ? ` ${r.marca}` : '')
-  const dentro8h = (iso?: string | null) => !!iso && Date.now() - new Date(iso).getTime() <= 8 * 3600 * 1000
+  const dentro18h = (iso?: string | null) => !!iso && Date.now() - new Date(iso).getTime() <= 18 * 3600 * 1000
   const miUsuarioId = getUser()?.id
   const recuperables = finalizados
-    // Solo los que finalizó el propio usuario, con firmas, en las últimas 8 horas.
-    .filter((r) => r.registrado_por_id === miUsuarioId && (r.operario_nombre || r.empacador_nombre) && dentro8h(r.creado_en))
+    // Solo los que finalizó el propio usuario, con firmas, en las últimas 18 horas.
+    .filter((r) => r.registrado_por_id === miUsuarioId && (r.operario_nombre || r.empacador_nombre) && dentro18h(r.creado_en))
     .sort((a, b) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime())
 
   return (
@@ -372,12 +372,12 @@ export default function F006Form({
           </>)}
 
           <div className="saved-div" onClick={() => { const nv = !verRecuperar; setVerRecuperar(nv); if (nv) cargarFinalizados() }}>
-            <span>{verRecuperar ? '▾' : '▸'} Recuperar finalizados (8 h)</span>
+            <span>{verRecuperar ? '▾' : '▸'} Recuperar finalizados (18 h)</span>
             <span className="saved-line" />
           </div>
           {verRecuperar && (
             <div className="saved-list">
-              {recuperables.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>No hay registros finalizados en las últimas 8 horas.</p>}
+              {recuperables.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>No hay registros finalizados en las últimas 18 horas.</p>}
               {recuperables.map((r) => (
                 <div key={r.id} className="saved-item">
                   <div>

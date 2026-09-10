@@ -52,7 +52,7 @@ export default function F204Form({
   // Registros que YO guardé hoy (solo del usuario en sesión), para desplegarlos
   // y volver a editarlos —igual que en F-005 / F-158.
   const cargarGuardados = () =>
-    apiGet<F204Registro[]>(`/f204/registros?mios=true&fecha=${hoy()}`).then(setGuardados).catch(() => {})
+    apiGet<F204Registro[]>(`/f204/registros?mios=true&recientes_horas=18`).then(setGuardados).catch(() => {})
 
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
@@ -183,14 +183,14 @@ export default function F204Form({
           </div>
 
           <div className="saved-div" onClick={() => setVerGuardados((v) => !v)}>
-            <span>{verGuardados ? '▾' : '▸'} Guardados hoy ({guardados.length})</span>
+            <span>{verGuardados ? '▾' : '▸'} Guardados (18 h) ({guardados.length})</span>
             <span className="saved-line" />
           </div>
           {verGuardados && (
             <div className="saved-list">
               <input className="filt-search" style={{ marginBottom: 6 }} placeholder="Buscar por palabras clave…"
                 value={busqGuardados} onChange={(e) => setBusqGuardados(e.target.value)} />
-              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Aún no has guardado entregas hoy.</p>}
+              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin entregas guardadas en las últimas 18 h.</p>}
               {guardados.length > 0 && guardadosFiltrados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin coincidencias.</p>}
               {guardadosFiltrados.map((r) => (
                 <div key={r.id} className="saved-item">

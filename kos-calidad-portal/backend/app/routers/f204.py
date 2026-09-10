@@ -4,7 +4,7 @@ Fecha y hora las fija el servidor. "Recibido por" = usuario en sesión.
 "Entregado por" = operario elegido del catálogo (se guarda el nombre para mostrar).
 Editar y borrar registros: solo admin.
 """
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -69,6 +69,7 @@ def listar_registros(
     fecha: Optional[date] = None,
     turno: Optional[int] = None,
     mios: bool = False,
+    recientes_horas: Optional[int] = None,
     user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -78,8 +79,11 @@ def listar_registros(
     if turno:
         q = q.filter(models.F204Registro.turno == turno)
     if mios:
-        # Solo los registros del usuario en sesión (para "Guardados hoy").
+        # Solo los registros del usuario en sesión (para el panel lateral).
         q = q.filter(models.F204Registro.recibido_por_id == user.id)
+    if recientes_horas:
+        # Registrados en las últimas N horas (ventana para reabrir/editar).
+        q = q.filter(models.F204Registro.creado_en >= now_co() - timedelta(hours=recientes_horas))
     return q.order_by(models.F204Registro.creado_en.desc()).all()
 
 

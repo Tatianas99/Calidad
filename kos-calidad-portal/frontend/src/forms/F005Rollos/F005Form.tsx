@@ -60,7 +60,7 @@ export default function F005Form({
   const [st, setSt] = useDraft<State>('draft_f005_v1', { entradas: [] })
 
   const cargarGuardados = () =>
-    apiGet<F005Registro[]>(`/f005/registros?mios=true&fecha=${hoy()}`).then(setGuardados).catch(() => {})
+    apiGet<F005Registro[]>(`/f005/registros?mios=true&recientes_horas=18`).then(setGuardados).catch(() => {})
 
   useEffect(() => {
     apiGet<F158Config>('/f158/config').then(setConfig).catch(() => {})
@@ -180,14 +180,14 @@ export default function F005Form({
           </div>
 
           <div className="saved-div" onClick={() => setVerGuardados((v) => !v)}>
-            <span>{verGuardados ? '▾' : '▸'} Guardados hoy ({guardados.length})</span>
+            <span>{verGuardados ? '▾' : '▸'} Guardados (18 h) ({guardados.length})</span>
             <span className="saved-line" />
           </div>
           {verGuardados && (
             <div className="saved-list">
               <input className="filt-search" style={{ marginBottom: 6 }} placeholder="Buscar por palabras clave…"
                 value={busqGuardados} onChange={(e) => setBusqGuardados(e.target.value)} />
-              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Aún no has guardado rollos hoy.</p>}
+              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin rollos guardados en las últimas 18 h.</p>}
               {guardados.length > 0 && guardadosFiltrados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin coincidencias.</p>}
               {guardadosFiltrados.map((r) => (
                 <div key={r.id} className="saved-item">
