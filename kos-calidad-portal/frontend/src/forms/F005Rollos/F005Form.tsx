@@ -135,15 +135,19 @@ export default function F005Form({
       observaciones: e.observaciones ?? null,
       ...(admin ? { fecha: e.fecha || hoy() } : {}),
     }
-    const r = e.editId
-      ? await apiMutate('PUT', `/f005/registros/${e.editId}`, body)
-      : await apiMutate('POST', '/f005/registros', { id: e.localId, ...body })
-    setSt((s) => {
-      const entradas = s.entradas.filter((x) => x.localId !== e.localId)
-      return { ...s, entradas, seleccionadoId: s.seleccionadoId === e.localId ? entradas[0]?.localId : s.seleccionadoId }
-    })
-    cargarGuardados()
-    flash(r.ok ? (e.editId ? 'Registro actualizado ✔' : 'Registro guardado ✔') : 'Guardado (pendiente de sincronizar)')
+    try {
+      const r = e.editId
+        ? await apiMutate('PUT', `/f005/registros/${e.editId}`, body)
+        : await apiMutate('POST', '/f005/registros', { id: e.localId, ...body })
+      setSt((s) => {
+        const entradas = s.entradas.filter((x) => x.localId !== e.localId)
+        return { ...s, entradas, seleccionadoId: s.seleccionadoId === e.localId ? entradas[0]?.localId : s.seleccionadoId }
+      })
+      cargarGuardados()
+      flash(r.ok ? (e.editId ? 'Registro actualizado ✔' : 'Registro guardado ✔') : 'Guardado (pendiente de sincronizar)')
+    } catch (err) {
+      flash(err instanceof Error ? err.message : 'No se pudo guardar el registro')
+    }
   }
 
   const nombre = (r: F005Registro) => `Rollo - ${r.lote}`

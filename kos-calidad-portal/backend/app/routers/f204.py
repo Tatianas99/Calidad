@@ -98,12 +98,14 @@ def obtener_registro(registro_id: str, db: Session = Depends(get_db)):
 @router.put("/registros/{registro_id}", response_model=schemas.F204RegistroOut)
 def editar_registro(
     registro_id: str, data: schemas.F204RegistroCreate,
-    _admin: models.Usuario = Depends(require_admin), db: Session = Depends(get_db),
+    user: models.Usuario = Depends(get_current_user), db: Session = Depends(get_db),
 ):
-    """Edita un registro. Solo admin."""
+    """Edita un registro. Lo puede editar quien lo recibió (autor) o un admin."""
     reg = db.get(models.F204Registro, registro_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+    if user.rol != "admin" and reg.recibido_por_id != user.id:
+        raise HTTPException(status_code=403, detail="Solo puedes editar tus propios registros")
     reg.turno = data.turno
     reg.orden_produccion = data.orden_produccion
     reg.maquina_id = data.maquina_id
