@@ -72,7 +72,7 @@ export default function FichasTecnicas() {
       />
       {cargando ? <p className="muted">Cargando…</p> : (
         <div className="table-wrap">
-          <table className="ftable">
+          <table className="ftable ftable-sticky">
             <thead>
               <tr>
                 <th>Referencia</th><th>Categoría</th>
