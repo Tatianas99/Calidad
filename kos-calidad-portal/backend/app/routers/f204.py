@@ -68,6 +68,8 @@ def crear_registro(
 def listar_registros(
     fecha: Optional[date] = None,
     turno: Optional[int] = None,
+    mios: bool = False,
+    user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     q = db.query(models.F204Registro)
@@ -75,6 +77,9 @@ def listar_registros(
         q = q.filter(models.F204Registro.fecha == fecha)
     if turno:
         q = q.filter(models.F204Registro.turno == turno)
+    if mios:
+        # Solo los registros del usuario en sesión (para "Guardados hoy").
+        q = q.filter(models.F204Registro.recibido_por_id == user.id)
     return q.order_by(models.F204Registro.creado_en.desc()).all()
 
 

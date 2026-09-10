@@ -7,6 +7,7 @@ import { Field } from '../../components/Field'
 import OptionButtons from '../../components/OptionButtons'
 import ComboBox from '../../components/ComboBox'
 import OPSearch from '../../components/OPSearch'
+import { matchKeywords } from '../../lib/fuzzy'
 import type { Referencia, Maquina, Persona, F204Registro } from '../../lib/types'
 
 const RESULTADOS = ['C', 'NC', 'NA']
@@ -39,39 +40,52 @@ export default function F204Form({
   const [refs, setRefs] = useState<Referencia[]>([])
   const [maqs, setMaqs] = useState<Maquina[]>([])
   const [operarios, setOperarios] = useState<Persona[]>([])
+  const [guardados, setGuardados] = useState<F204Registro[]>([])
+  const [verGuardados, setVerGuardados] = useState(false)
+  const [busqGuardados, setBusqGuardados] = useState('')
   const [msg, setMsg] = useState('')
   const user = getUser()
   const admin = user?.rol === 'admin'
 
   const [st, setSt] = useDraft<State>('draft_f204_v1', { entradas: [] })
 
+  // Registros que YO guardé hoy (solo del usuario en sesión), para desplegarlos
+  // y volver a editarlos —igual que en F-005 / F-158.
+  const cargarGuardados = () =>
+    apiGet<F204Registro[]>(`/f204/registros?mios=true&fecha=${hoy()}`).then(setGuardados).catch(() => {})
+
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
     apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
     apiGet<Persona[]>('/catalogos/personas?rol=operario').then(setOperarios).catch(() => {})
+    cargarGuardados()
   }, [])
+
+  // Reabre un registro guardado como entrada editable (buscar por editId).
+  function editarGuardado(r: F204Registro) {
+    setSt((s) => {
+      const existente = s.entradas.find((e) => e.editId === r.id)
+      if (existente) return { ...s, seleccionadoId: existente.localId }
+      const nueva: Entrada = {
+        localId: uuid(), editId: r.id, fecha: r.fecha, turno: r.turno,
+        orden_produccion: r.orden_produccion ?? undefined,
+        maquina: r.maquina_texto ?? (r.maquina_id ? maqs.find((m) => m.id === r.maquina_id)?.nombre : undefined),
+        referencia_texto: r.referencia_texto ?? (r.referencia_id ? refLabel(r.referencia_id) : undefined),
+        marca: r.marca ?? undefined,
+        cantidad_clase_b: r.cantidad_clase_b != null ? String(r.cantidad_clase_b) : undefined,
+        verificacion: r.verificacion_desperdicio ?? undefined,
+        entregado_por: r.entregado_por_nombre ?? (r.entregado_por_id ? operarios.find((p) => p.id === r.entregado_por_id)?.nombre : undefined),
+        observaciones: r.observaciones ?? undefined, createdAt: Date.now(),
+      }
+      return { ...s, entradas: [...s.entradas, nueva], seleccionadoId: nueva.localId }
+    })
+  }
 
   // Edición pedida desde "Ver registros F-204": carga ese registro.
   useEffect(() => {
     if (!editarId) return
     apiGet<F204Registro>(`/f204/registros/${editarId}`)
-      .then((r) => {
-        setSt((s) => {
-          if (s.entradas.some((e) => e.editId === r.id)) return { ...s, seleccionadoId: s.entradas.find((e) => e.editId === r.id)!.localId }
-          const nueva: Entrada = {
-            localId: uuid(), editId: r.id, fecha: r.fecha, turno: r.turno,
-            orden_produccion: r.orden_produccion ?? undefined,
-            maquina: r.maquina_texto ?? (r.maquina_id ? maqs.find((m) => m.id === r.maquina_id)?.nombre : undefined),
-            referencia_texto: r.referencia_texto ?? (r.referencia_id ? refLabel(r.referencia_id) : undefined),
-            marca: r.marca ?? undefined,
-            cantidad_clase_b: r.cantidad_clase_b != null ? String(r.cantidad_clase_b) : undefined,
-            verificacion: r.verificacion_desperdicio ?? undefined,
-            entregado_por: r.entregado_por_nombre ?? (r.entregado_por_id ? operarios.find((p) => p.id === r.entregado_por_id)?.nombre : undefined),
-            observaciones: r.observaciones ?? undefined, createdAt: Date.now(),
-          }
-          return { ...s, entradas: [...s.entradas, nueva], seleccionadoId: nueva.localId }
-        })
-      })
+      .then((r) => editarGuardado(r))
       .catch(() => {})
       .finally(() => onEditarConsumido?.())
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,11 +141,16 @@ export default function F204Form({
       const entradas = s.entradas.filter((x) => x.localId !== e.localId)
       return { ...s, entradas, seleccionadoId: s.seleccionadoId === e.localId ? entradas[0]?.localId : s.seleccionadoId }
     })
+    cargarGuardados()
     flash(r.ok ? (e.editId ? 'Registro actualizado ✔' : 'Registro guardado ✔') : 'Guardado (pendiente de sincronizar)')
   }
 
   const resumen = (e: Entrada) =>
     (e.turno ? `T${e.turno}` : 'Sin turno') + ' · ' + (e.maquina || 'Sin máquina')
+  const nombreGuardado = (r: F204Registro) =>
+    (r.referencia_texto || 'Entrega') + (r.marca ? ` ${r.marca}` : '')
+  const guardadosFiltrados = guardados.filter((r) =>
+    matchKeywords(busqGuardados, `${nombreGuardado(r)} ${r.maquina_texto ?? ''}`))
 
   return (
     <div>
@@ -162,6 +181,30 @@ export default function F204Form({
               </button>
             ))}
           </div>
+
+          <div className="saved-div" onClick={() => setVerGuardados((v) => !v)}>
+            <span>{verGuardados ? '▾' : '▸'} Guardados hoy ({guardados.length})</span>
+            <span className="saved-line" />
+          </div>
+          {verGuardados && (
+            <div className="saved-list">
+              <input className="filt-search" style={{ marginBottom: 6 }} placeholder="Buscar por palabras clave…"
+                value={busqGuardados} onChange={(e) => setBusqGuardados(e.target.value)} />
+              {guardados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Aún no has guardado entregas hoy.</p>}
+              {guardados.length > 0 && guardadosFiltrados.length === 0 && <p className="muted" style={{ padding: '0 4px' }}>Sin coincidencias.</p>}
+              {guardadosFiltrados.map((r) => (
+                <div key={r.id} className="saved-item">
+                  <div>
+                    <strong>{nombreGuardado(r)}</strong>
+                    <div className="muted">
+                      {new Date(r.fecha_hora).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}{r.turno ? ` · T${r.turno}` : ''}{r.maquina_texto ? ` · ${r.maquina_texto}` : ''}
+                    </div>
+                  </div>
+                  <button className="btn btn-ghost pill-btn" onClick={() => editarGuardado(r)}>Editar</button>
+                </div>
+              ))}
+            </div>
+          )}
         </aside>
 
         <section>

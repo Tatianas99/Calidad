@@ -375,7 +375,7 @@ textarea { min-height: 70px; resize: vertical; }
 .table-wrap { overflow-x: auto; }
 .ftable { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .ftable th, .ftable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-.ftable thead th { background: var(--surface-2); font-weight: 700; position: sticky; top: 52px; z-index: 3; box-shadow: inset 0 -1px 0 var(--border); }
+.ftable thead th { background: var(--surface-2); font-weight: 700; position: sticky; top: var(--topbar-h, 52px); z-index: 3; box-shadow: inset 0 -1px 0 var(--border); }
 .ftable .filter-row th { padding: 4px 6px; }
 .ftable .filter-row input { padding: 6px 8px; font-size: .82rem; font-weight: 400; min-width: 90px; }
 .ftable tbody tr.clickable { cursor: pointer; }

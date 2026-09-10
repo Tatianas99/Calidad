@@ -38,6 +38,24 @@ export default function App() {
     startSync()
   }, [])
 
+  // Mide la altura real de la barra superior y la expone como variable CSS
+  // (--topbar-h). Los encabezados de tabla fijos (sticky) se anclan justo debajo
+  // de ella; en el celular la barra puede ser más alta, así que no sirve un valor
+  // fijo (antes 52px) que dejaba los títulos tapando el primer registro.
+  useEffect(() => {
+    const medir = () => {
+      const tb = document.querySelector('.topbar') as HTMLElement | null
+      if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px')
+    }
+    medir()
+    window.addEventListener('resize', medir)
+    window.addEventListener('orientationchange', medir)
+    return () => {
+      window.removeEventListener('resize', medir)
+      window.removeEventListener('orientationchange', medir)
+    }
+  }, [user])
+
   if (!user) {
     return <Login onLogged={() => { setUser(getUser()); setView('home') }} />
   }
