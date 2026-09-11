@@ -54,6 +54,9 @@ type State = {
   productos: Producto[]
   seleccionadoId?: string
 }
+// Selección recordada para montar pruebas (tipo de prueba / papel / temperatura).
+type FiltDef = { tp: string; tm: string; temp90: string }
+type SetFiltDef = (v: FiltDef | ((p: FiltDef) => FiltDef)) => void
 
 const hoy = () => new Date().toISOString().slice(0, 10)
 const labelOf = (opts: Option[], v?: string) => opts.find((o) => o.value === v)?.label ?? v ?? ''
@@ -87,6 +90,13 @@ export default function F006Form({
   const stRef = useRef(st)
   stRef.current = st
   const embTimers = useRef<Record<string, number>>({})
+
+  // Tipo de prueba y papel elegidos para montar: se recuerdan entre productos y
+  // al salir/volver del portal (borrador persistente por usuario), no solo dentro
+  // del producto actual. La cantidad NO se recuerda (es propia de cada prueba).
+  const [filtDef, setFiltDef] = useDraft<{ tp: string; tm: string; temp90: string }>(
+    'f006_filt_def_v1', { tp: '', tm: '', temp90: '' },
+  )
 
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
@@ -416,6 +426,8 @@ export default function F006Form({
               onResultado={(f, c, goteo, tapa, com) => registrarResultado(selected.registroId, f, c, goteo, tapa, com)}
               onFirmas={(patch) => patchProd(selected.registroId, patch)}
               onFinalizar={() => finalizarProducto(selected.registroId)}
+              filtDef={filtDef}
+              setFiltDef={setFiltDef}
             />
           )}
         </section>
@@ -427,7 +439,7 @@ export default function F006Form({
 }
 
 function ProductoDetalle({
-  prod, initialTab, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onMontarParada, onResultado, onFirmas, onFinalizar,
+  prod, initialTab, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onMontarParada, onResultado, onFirmas, onFinalizar, filtDef, setFiltDef,
 }: {
   prod: Producto
   initialTab: Tab
@@ -443,6 +455,8 @@ function ProductoDetalle({
   onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) => void
   onFirmas: (patch: Partial<Producto>) => void
   onFinalizar: () => void
+  filtDef: FiltDef
+  setFiltDef: SetFiltDef
 }) {
   const [tab, setTab] = useState<Tab>(initialTab)
   const admin = getUser()?.rol === 'admin'
@@ -534,7 +548,7 @@ function ProductoDetalle({
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Pruebas de filtración</h3>
           {!cabeceraCompleta && <p className="muted">Completa referencia y máquina (pestaña anterior) para montar pruebas.</p>}
-          {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} onMontarParada={onMontarParada} />}
+          {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} onMontarParada={onMontarParada} filtDef={filtDef} setFiltDef={setFiltDef} />}
           {prod.filtraciones.length === 0 && cabeceraCompleta && <p className="muted">Aún no hay pruebas montadas.</p>}
           {prod.filtraciones.map((f) => (
             <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={(prod.referencia_texto || '') + (prod.marca ? ` ${prod.marca}` : '')} onResultado={onResultado} />
@@ -598,11 +612,13 @@ function ProductoDetalle({
   )
 }
 
-function NuevaFiltracion({ opts, onMontar, onMontarParada }: { opts: Opciones; onMontar: (tp: string, tm: string, c: number, temp90: string) => void; onMontarParada: () => void }) {
-  const [tp, setTp] = useState('')
-  const [tm, setTm] = useState('')
-  const [cant, setCant] = useState('')
-  const [temp90, setTemp90] = useState('')  // solo aplica a Café caliente
+function NuevaFiltracion({ opts, onMontar, onMontarParada, filtDef, setFiltDef }: { opts: Opciones; onMontar: (tp: string, tm: string, c: number, temp90: string) => void; onMontarParada: () => void; filtDef: FiltDef; setFiltDef: SetFiltDef }) {
+  const [cant, setCant] = useState('')  // la cantidad es propia de cada prueba (no se recuerda)
+  // Tipo de prueba, papel y temperatura se recuerdan entre productos y sesiones.
+  const { tp, tm, temp90 } = filtDef
+  const setTp = (v: string) => setFiltDef((d) => ({ ...d, tp: v, temp90: v !== 'cafe_caliente' ? '' : d.temp90 }))
+  const setTm = (v: string) => setFiltDef((d) => ({ ...d, tm: v }))
+  const setTemp90 = (v: string) => setFiltDef((d) => ({ ...d, temp90: v }))
 
   const faltaTemp = tp === 'cafe_caliente' && !temp90
   const montar = () => {
@@ -619,7 +635,7 @@ function NuevaFiltracion({ opts, onMontar, onMontarParada }: { opts: Opciones; o
         <OptionButtons
           options={opts.tipos_prueba_f006}
           value={tp}
-          onChange={(v) => { setTp(v); if (v !== 'cafe_caliente') setTemp90('') }}
+          onChange={setTp}
         />
       </Field>
       {tp === 'cafe_caliente' && (
