@@ -1,6 +1,8 @@
 """Endpoints de catálogos (personas, máquinas, referencias, puntos) y opciones."""
+import re
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -23,6 +25,38 @@ def fichas_tecnicas(db: Session = Depends(get_db)):
     return (db.query(models.FichaTecnica)
             .filter(models.FichaTecnica.activo == True)
             .order_by(models.FichaTecnica.orden).all())
+
+
+@router.post("/fichas", response_model=schemas.FichaTecnicaOut, status_code=201)
+def crear_ficha(
+    data: schemas.FichaTecnicaCreate,
+    _admin: models.Usuario = Depends(require_admin), db: Session = Depends(get_db),
+):
+    """Crea una nueva ficha técnica. Solo admin."""
+    ref = (data.referencia or "").strip()
+    if not ref:
+        raise HTTPException(status_code=422, detail="La referencia es obligatoria")
+    # id (slug) único a partir de la referencia.
+    base = re.sub(r"[^a-z0-9]+", "-", ref.lower()).strip("-") or "ficha"
+    fid, n = base, 2
+    while db.get(models.FichaTecnica, fid) is not None:
+        fid, n = f"{base}-{n}", n + 1
+    orden = (db.query(func.max(models.FichaTecnica.orden)).scalar() or 0) + 1
+
+    def limpio(v: Optional[str]) -> Optional[str]:
+        v = (v or "").strip()
+        return v or None
+
+    f = models.FichaTecnica(
+        id=fid, referencia=ref, codigo=limpio(data.codigo), categoria=limpio(data.categoria),
+        diam_inferior=limpio(data.diam_inferior), rim=limpio(data.rim),
+        diam_exterior=limpio(data.diam_exterior), altura=limpio(data.altura),
+        orden=orden, activo=True,
+    )
+    db.add(f)
+    db.commit()
+    db.refresh(f)
+    return f
 
 
 @router.put("/fichas/{ficha_id}", response_model=schemas.FichaTecnicaOut)

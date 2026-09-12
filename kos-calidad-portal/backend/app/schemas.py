@@ -464,6 +464,16 @@ class FichaTecnicaUpdate(BaseModel):
     altura: Optional[str] = None
 
 
+class FichaTecnicaCreate(BaseModel):
+    referencia: str
+    codigo: Optional[str] = None
+    categoria: Optional[str] = None
+    diam_inferior: Optional[str] = None
+    rim: Optional[str] = None
+    diam_exterior: Optional[str] = None
+    altura: Optional[str] = None
+
+
 # --------------------------------------------------------------------------- #
 # Borrador de trabajo (lista del turno) por usuario
 # --------------------------------------------------------------------------- #

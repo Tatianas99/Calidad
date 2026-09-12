@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { apiGet, apiSend } from '../lib/api'
 import { getUser } from '../lib/auth'
 import { matchKeywords } from '../lib/fuzzy'
+import { Field } from '../components/Field'
 
 type Ficha = {
   id: string; codigo: string; categoria: string; referencia: string
@@ -10,6 +11,8 @@ type Ficha = {
 }
 type Campo = 'referencia' | 'categoria' | 'diam_inferior' | 'rim' | 'diam_exterior' | 'altura'
 const VACIO = { referencia: '', categoria: '', diam_inferior: '', rim: '', diam_exterior: '', altura: '' }
+type NuevoCampo = 'referencia' | 'codigo' | 'categoria' | 'diam_inferior' | 'rim' | 'diam_exterior' | 'altura'
+const NUEVO_VACIO = { referencia: '', codigo: '', categoria: '', diam_inferior: '', rim: '', diam_exterior: '', altura: '' }
 
 export default function FichasTecnicas() {
   const [fichas, setFichas] = useState<Ficha[]>([])
@@ -17,6 +20,8 @@ export default function FichasTecnicas() {
   const [cargando, setCargando] = useState(true)
   const [editId, setEditId] = useState<string | null>(null)
   const [edit, setEdit] = useState<Record<Campo, string>>(VACIO)
+  const [agregando, setAgregando] = useState(false)
+  const [nuevo, setNuevo] = useState<Record<NuevoCampo, string>>(NUEVO_VACIO)
   const admin = getUser()?.rol === 'admin'
 
   useEffect(() => {
@@ -52,6 +57,26 @@ export default function FichasTecnicas() {
     }
   }
 
+  const setNuevoCampo = (k: NuevoCampo, v: string) => setNuevo((n) => ({ ...n, [k]: v }))
+  const cancelarNuevo = () => { setNuevo(NUEVO_VACIO); setAgregando(false) }
+
+  async function guardarNuevo() {
+    const referencia = nuevo.referencia.trim()
+    if (!referencia) { window.alert('La referencia es obligatoria'); return }
+    const body = {
+      referencia, codigo: nuevo.codigo.trim(), categoria: nuevo.categoria.trim(),
+      diam_inferior: nuevo.diam_inferior.trim(), rim: nuevo.rim.trim(),
+      diam_exterior: nuevo.diam_exterior.trim(), altura: nuevo.altura.trim(),
+    }
+    try {
+      const creada = await apiSend<Ficha>('POST', '/catalogos/fichas', body)
+      setFichas((fs) => [creada, ...fs])
+      setNuevo(NUEVO_VACIO); setAgregando(false); setQ('')
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'No se pudo agregar la ficha')
+    }
+  }
+
   const filtradas = useMemo(
     () => fichas.filter((f) => matchKeywords(q, `${f.referencia} ${f.categoria} ${f.codigo}`)),
     [fichas, q],
@@ -64,12 +89,46 @@ export default function FichasTecnicas() {
         <span className="code">📐</span>
         <h2>Fichas técnicas</h2>
       </div>
-      <p className="muted" style={{ marginTop: 0 }}>Medidas de referencia (diámetros, rim y altura).</p>
-      <input
-        className="filt-search" style={{ maxWidth: 460, marginBottom: 12 }}
-        type="search" placeholder="🔎 Buscar referencia (ej: 7 oz, cont, vaso)…"
-        value={q} onChange={(e) => setQ(e.target.value)}
-      />
+      <p className="muted" style={{ marginTop: 0 }}>
+        Medidas de referencia (diámetros, rim y altura). Todas en <strong>mm</strong>, con tolerancia de <strong>± 2 mm</strong>.
+      </p>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+        <input
+          className="filt-search" style={{ maxWidth: 460, flex: '1 1 240px', margin: 0 }}
+          type="search" placeholder="🔎 Buscar (ej: contenedor 7 oz, cont 7, vaso)…"
+          value={q} onChange={(e) => setQ(e.target.value)}
+        />
+        {admin && !agregando && (
+          <button className="btn btn-primary" onClick={() => setAgregando(true)}>➕ Agregar ficha</button>
+        )}
+      </div>
+
+      {admin && agregando && (
+        <div className="panel" style={{ marginBottom: 14 }}>
+          <h3 style={{ marginTop: 0 }}>Nueva ficha técnica</h3>
+          <div className="row">
+            <Field label="Referencia">
+              <input autoFocus value={nuevo.referencia} onChange={(e) => setNuevoCampo('referencia', e.target.value)} placeholder="Ej: CONTENEDOR 7 OZ" />
+            </Field>
+            <Field label="Categoría">
+              <input value={nuevo.categoria} onChange={(e) => setNuevoCampo('categoria', e.target.value)} placeholder="Ej: Contenedor" />
+            </Field>
+            <Field label="Código" hint="opcional">
+              <input value={nuevo.codigo} onChange={(e) => setNuevoCampo('codigo', e.target.value)} />
+            </Field>
+          </div>
+          <div className="row">
+            <Field label="Diám. inferior (mm)"><input inputMode="decimal" value={nuevo.diam_inferior} onChange={(e) => setNuevoCampo('diam_inferior', e.target.value)} /></Field>
+            <Field label="Rim (mm)"><input inputMode="decimal" value={nuevo.rim} onChange={(e) => setNuevoCampo('rim', e.target.value)} /></Field>
+            <Field label="Diám. exterior (mm)"><input inputMode="decimal" value={nuevo.diam_exterior} onChange={(e) => setNuevoCampo('diam_exterior', e.target.value)} /></Field>
+            <Field label="Altura (mm)"><input inputMode="decimal" value={nuevo.altura} onChange={(e) => setNuevoCampo('altura', e.target.value)} /></Field>
+          </div>
+          <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost" onClick={cancelarNuevo}>Cancelar</button>
+            <button className="btn btn-primary" onClick={guardarNuevo}>Guardar ficha</button>
+          </div>
+        </div>
+      )}
       {cargando ? <p className="muted">Cargando…</p> : (
         <div className="table-wrap">
           <table className="ftable ftable-sticky">
