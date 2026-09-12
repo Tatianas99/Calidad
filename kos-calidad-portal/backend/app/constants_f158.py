@@ -25,8 +25,10 @@ MATERIALES = ["P1", "P2", "PS", "Bio", "Kraft", "SBS"]
 # Calibres (compartidos). El campo permite además "Otro ¿Cuál?" para escribir uno.
 CALIBRES = ["0.10", "0.11", "0.12", "0.13", "0.14", "0.15", "0.16", "0.17", "0.18"]
 
-# Máquinas de prueba de Formación: por ahora las mismas que se usan en F-006.
-MAQUINAS_FORMACION = ["Termoformadora Norte", "Termoformadora Sur", "Selladora Central"]
+# Máquinas del proceso Formación: el listado curado de producción (mismo que
+# usan F-006 y F-204).
+from .constants import MAQUINAS_PRODUCCION
+MAQUINAS_FORMACION = list(MAQUINAS_PRODUCCION)
 
 
 # --------------------------- Constructores de campo ------------------------- #

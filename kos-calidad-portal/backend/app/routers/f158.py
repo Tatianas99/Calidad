@@ -37,17 +37,10 @@ def _out(reg: models.F158Recorrido) -> schemas.F158RecorridoOut:
 def obtener_config(db: Session = Depends(get_db)):
     """Procesos, máquinas y checklists (para que el frontend renderice el formato).
 
-    Las máquinas de Formación se toman de la tabla `maquinas` (mismas que usan
-    F-006 y F-204). Los demás procesos conservan sus máquinas por defecto.
+    Las máquinas de Formación son el listado curado de producción
+    (MAQUINAS_PRODUCCION), el mismo que usan F-006 y F-204.
     """
-    maqs = [
-        m.nombre
-        for m in db.query(models.Maquina)
-        .filter(models.Maquina.activo == True)
-        .order_by(models.Maquina.nombre)
-        .all()
-    ]
-    return config_f158(maquinas_formacion=maqs)
+    return config_f158()
 
 
 @router.get("/recorridos", response_model=list[schemas.F158RecorridoOut])

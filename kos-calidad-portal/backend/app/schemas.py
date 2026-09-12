@@ -279,7 +279,7 @@ class F158RecorridoOut(BaseModel):
 class F204RegistroCreate(BaseModel):
     id: Optional[str] = None  # UUID del cliente (idempotencia)
     fecha: Optional[date] = None  # solo admin puede fijar fecha manual
-    turno: int = Field(ge=1, le=3)
+    turno: Optional[int] = Field(default=None, ge=1, le=3)  # automático por la hora
     orden_produccion: Optional[str] = None
     maquina_id: Optional[int] = None
     maquina_texto: Optional[str] = None

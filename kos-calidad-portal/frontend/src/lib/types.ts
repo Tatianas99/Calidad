@@ -16,6 +16,7 @@ export type Opciones = {
   tipos_material_f006: Option[]
   resultados: string[]
   turnos: number[]
+  maquinas: string[]
 }
 
 export type Filtracion = {

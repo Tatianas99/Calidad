@@ -11,6 +11,7 @@ from ..referencias_sync import sync_referencias
 from ..maquinas_sync import sync_maquinas
 from ..constants import (
     as_options, EMBALAJE_ITEMS_F006, TIPOS_PRUEBA_F006, TIPOS_MATERIAL_F006, RESULTADOS,
+    MAQUINAS_PRODUCCION,
 )
 
 router = APIRouter(prefix="/catalogos", tags=["Catálogos"])
@@ -131,4 +132,5 @@ def opciones():
         "tipos_material_f006": as_options(TIPOS_MATERIAL_F006),
         "resultados": RESULTADOS,
         "turnos": [1, 2, 3],
+        "maquinas": MAQUINAS_PRODUCCION,
     }

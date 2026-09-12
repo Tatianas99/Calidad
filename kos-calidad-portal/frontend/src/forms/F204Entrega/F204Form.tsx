@@ -39,6 +39,7 @@ export default function F204Form({
 }) {
   const [refs, setRefs] = useState<Referencia[]>([])
   const [maqs, setMaqs] = useState<Maquina[]>([])
+  const [maquinas, setMaquinas] = useState<string[]>([])   // listado curado de producción
   const [operarios, setOperarios] = useState<Persona[]>([])
   const [guardados, setGuardados] = useState<F204Registro[]>([])
   const [verGuardados, setVerGuardados] = useState(false)
@@ -57,6 +58,7 @@ export default function F204Form({
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
     apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
+    apiGet<{ maquinas: string[] }>('/catalogos/opciones').then((o) => setMaquinas(o.maquinas)).catch(() => {})
     apiGet<Persona[]>('/catalogos/personas?rol=operario').then(setOperarios).catch(() => {})
     cargarGuardados()
   }, [])
@@ -116,7 +118,6 @@ export default function F204Form({
 
   const faltan = (e: Entrada): string[] => {
     const f: string[] = []
-    if (!e.turno) f.push('Turno')
     if (!e.maquina || !e.maquina.trim()) f.push('Máquina')
     if (!e.referencia_texto || !e.referencia_texto.trim()) f.push('Referencia')
     if (!e.entregado_por || !e.entregado_por.trim()) f.push('Entregado por')
@@ -126,7 +127,7 @@ export default function F204Form({
   async function finalizar(e: Entrada) {
     if (faltan(e).length) { flash(`Faltan campos: ${faltan(e).join(', ')}`); return }
     const body = {
-      turno: e.turno, orden_produccion: e.orden_produccion ?? null, maquina_texto: e.maquina ?? null,
+      orden_produccion: e.orden_produccion ?? null, maquina_texto: e.maquina ?? null,
       referencia_texto: e.referencia_texto ?? null, marca: e.marca ?? null,
       cantidad_clase_b: e.cantidad_clase_b != null && e.cantidad_clase_b !== '' ? Number(e.cantidad_clase_b) : null,
       verificacion_desperdicio: e.verificacion ?? null,
@@ -150,7 +151,7 @@ export default function F204Form({
   }
 
   const resumen = (e: Entrada) =>
-    (e.turno ? `T${e.turno}` : 'Sin turno') + ' · ' + (e.maquina || 'Sin máquina')
+    (e.turno ? `T${e.turno}` : 'Turno auto') + ' · ' + (e.maquina || 'Sin máquina')
   const nombreGuardado = (r: F204Registro) =>
     (r.referencia_texto || 'Entrega') + (r.marca ? ` ${r.marca}` : '')
   const guardadosFiltrados = guardados.filter((r) =>
@@ -226,14 +227,12 @@ export default function F204Form({
                     <input type="date" value={selected.fecha ?? hoy()} onChange={(e) => upd({ fecha: e.target.value })} />
                   </Field>
                 )}
-                <Field label="Turno">
-                  <select value={selected.turno ?? ''} onChange={(e) => upd({ turno: Number(e.target.value) })}>
-                    <option value="">Seleccionar…</option>
-                    {[1, 2, 3].map((t) => <option key={t} value={t}>Turno {t}</option>)}
-                  </select>
+                <Field label="Turno" hint="automático · según la hora">
+                  <input type="text" readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }}
+                    value={selected.turno ? `Turno ${selected.turno}` : 'Automático (según la hora)'} />
                 </Field>
                 <Field label="Máquina" hint="buscar o escribir">
-                  <ComboBox value={selected.maquina ?? ''} onChange={(v) => upd({ maquina: v })} options={maqs.map((m) => m.nombre)} placeholder="Buscar o escribir máquina…" />
+                  <ComboBox value={selected.maquina ?? ''} onChange={(v) => upd({ maquina: v })} options={maquinas} placeholder="Buscar o escribir máquina…" />
                 </Field>
                 <Field label="Orden de producción">
                   <OPSearch

@@ -14,6 +14,7 @@ from ..db import get_db
 from .. import models, schemas
 from ..auth import get_current_user, require_admin
 from ..timeutil import now_co, today_co, fecha_fields
+from .turnos import cargar_horarios, turno_de
 
 router = APIRouter(prefix="/f204", tags=["F-204 Entrega producto"])
 
@@ -37,10 +38,13 @@ def crear_registro(
         if existing:
             return existing
     f, fh = fecha_fields(user.rol == "admin", data.fecha)
+    # Turno automático según la hora de ingreso y los horarios configurados
+    # (igual que F-006), sin selección manual.
+    turno = turno_de(now_co(), cargar_horarios(db))
     kwargs = dict(
         fecha=f,
         fecha_hora=fh,
-        turno=data.turno,
+        turno=turno,
         orden_produccion=data.orden_produccion,
         maquina_id=data.maquina_id,
         maquina_texto=data.maquina_texto,
@@ -106,7 +110,8 @@ def editar_registro(
         raise HTTPException(status_code=404, detail="Registro no encontrado")
     if user.rol != "admin" and reg.recibido_por_id != user.id:
         raise HTTPException(status_code=403, detail="Solo puedes editar tus propios registros")
-    reg.turno = data.turno
+    if data.turno is not None:  # el turno es automático; solo se pisa si se envía
+        reg.turno = data.turno
     reg.orden_produccion = data.orden_produccion
     reg.maquina_id = data.maquina_id
     reg.maquina_texto = data.maquina_texto

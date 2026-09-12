@@ -414,7 +414,6 @@ export default function F006Form({
               key={selected.registroId}
               prod={selected}
               initialTab={pestanaInicial}
-              maqs={maqs}
               personas={personas}
               opts={opts}
               now={now}
@@ -439,11 +438,10 @@ export default function F006Form({
 }
 
 function ProductoDetalle({
-  prod, initialTab, maqs, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onMontarParada, onResultado, onFirmas, onFinalizar, filtDef, setFiltDef,
+  prod, initialTab, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onMontarParada, onResultado, onFirmas, onFinalizar, filtDef, setFiltDef,
 }: {
   prod: Producto
   initialTab: Tab
-  maqs: Maquina[]
   personas: Persona[]
   opts: Opciones | null
   now: number
@@ -509,7 +507,7 @@ function ProductoDetalle({
                 : <input type="text" value={new Date(prod.fecha + 'T00:00:00').toLocaleDateString('es-CO')} readOnly tabIndex={-1} style={{ background: 'var(--surface-2)' }} />}
             </Field>
             <Field label="Máquina" hint="buscar o escribir">
-              <ComboBox value={prod.maquina ?? ''} onChange={(v) => onCabecera({ maquina: v })} options={maqs.map((m) => m.nombre)} placeholder="Buscar o escribir máquina…" />
+              <ComboBox value={prod.maquina ?? ''} onChange={(v) => onCabecera({ maquina: v })} options={opts?.maquinas ?? []} placeholder="Buscar o escribir máquina…" />
             </Field>
           </div>
 
