@@ -65,13 +65,15 @@ def _page(canvas, doc):
     canvas.restoreState()
 
 
-def _encabezado(titulo, desde, hasta, usuario):
+def _encabezado(titulo, desde, hasta, usuario, op=None):
     fd = _dt(desde); fh = _dt(hasta)
-    txt = [
-        Paragraph(_esc(titulo), _S["titulo"]),
-        Paragraph(f"Rango: {fd[0]} {fd[1]} &nbsp;→&nbsp; {fh[0]} {fh[1]}", _S["sub"]),
-        Paragraph(f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} · {_esc(usuario)}", _S["sub"]),
-    ]
+    txt = [Paragraph(_esc(titulo), _S["titulo"])]
+    if op:
+        txt.append(Paragraph(f"Orden de producción: <b>{_esc(op)}</b>", _S["sub"]))
+        txt.append(Paragraph(f"Uso de la OP: {fd[0]} {fd[1]} &nbsp;→&nbsp; {fh[0]} {fh[1]}", _S["sub"]))
+    else:
+        txt.append(Paragraph(f"Rango: {fd[0]} {fd[1]} &nbsp;→&nbsp; {fh[0]} {fh[1]}", _S["sub"]))
+    txt.append(Paragraph(f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} · {_esc(usuario)}", _S["sub"]))
     cell = [txt]
     if _LOGO.exists():
         logo = Image(str(_LOGO), width=20 * mm, height=20 * mm * 270 / 325)
@@ -197,12 +199,15 @@ def _imagenes_recorrido(adjuntos, maximo=4):
 
 
 # ------------------------------- F-006 ------------------------------------- #
-def _f006(db, desde, hasta):
+def _f006(db, desde, hasta, op=None):
     maq, ref = _catalogos(db)
-    regs = (db.query(models.F006Registro)
-            .options(selectinload(models.F006Registro.filtraciones), selectinload(models.F006Registro.embalaje))
-            .filter(models.F006Registro.creado_en >= desde, models.F006Registro.creado_en <= hasta)
-            .order_by(models.F006Registro.creado_en).all())
+    q = (db.query(models.F006Registro)
+         .options(selectinload(models.F006Registro.filtraciones), selectinload(models.F006Registro.embalaje)))
+    if op:  # por OP: todos los registros de esa orden (sin filtrar por fecha)
+        q = q.filter(models.F006Registro.orden_produccion == op)
+    else:
+        q = q.filter(models.F006Registro.creado_en >= desde, models.F006Registro.creado_en <= hasta)
+    regs = q.order_by(models.F006Registro.creado_en).all()
     header = ["Fecha", "Hora", "OP", "Referencia", "Máquina", "Turno", "Pruebas", "% NC"]
     rows, detalles = [], []
     tot_nc = tot_mu = 0
@@ -420,12 +425,13 @@ def _f005(db, desde, hasta):
 _FORMATOS = {"f005": _f005, "f006": _f006, "f015": _f015, "f158": _f158, "f204": _f204}
 
 
-def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: str, db) -> bytes:
-    spec = _FORMATOS[formato](db, desde, hasta)
+def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: str, db, op=None) -> bytes:
+    # Solo F-006 admite filtro por OP; los demás formatos ignoran `op`.
+    spec = _f006(db, desde, hasta, op) if (formato == "f006") else _FORMATOS[formato](db, desde, hasta)
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
                             topMargin=13 * mm, bottomMargin=15 * mm, title=f"Reporte {formato.upper()}")
-    story = _encabezado(spec["titulo"], desde, hasta, usuario)
+    story = _encabezado(spec["titulo"], desde, hasta, usuario, op=op)
     if spec["kpis"]:
         story.append(Paragraph(" &nbsp;·&nbsp; ".join(_esc(k) for k in spec["kpis"]), _S["kpi"]))
         story.append(Spacer(1, 6))
