@@ -83,6 +83,7 @@ export default function App() {
       {hasPermiso('registrar_f204') && <NavItem label="F-204 Clase B y desperdicio" active={view === 'f204'} onClick={() => irA('f204')} />}
       <NavItem label="📐 Fichas técnicas" active={view === 'fichas'} onClick={() => irA('fichas')} />
       <a className="nav-item" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📋 Portal de PQRS ↗</a>
+      <a className="nav-item" href="https://evaluacionlinea-b5hchxhvcucvdpac.canadacentral-01.azurewebsites.net/admin/limpiezas" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>🛡️ Portal SGIA ↗</a>
 
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
       {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204'].includes(view)} onClick={() => irA('reportes')} />}
@@ -208,6 +209,10 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
         <a className="card tint blue-3" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
           <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>📋</span>
           <div className="code">PQRS ↗</div><h2>Portal de PQRS</h2>
+        </a>
+        <a className="card tint blue-1" href="https://evaluacionlinea-b5hchxhvcucvdpac.canadacentral-01.azurewebsites.net/admin/limpiezas" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🛡️</span>
+          <div className="code">SGIA ↗</div><h2>Portal SGIA</h2>
         </a>
       </div>
     </div>
