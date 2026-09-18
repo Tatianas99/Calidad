@@ -169,7 +169,7 @@ def dashboard(
     f204 = _rango(db.query(models.F204Registro), models.F204Registro.fecha).all()
     if tokens:
         f204 = [r for r in f204 if _match(tokens, f"{r.orden_produccion or ''} {ref_nombre(r)}")]
-    cb_maq, cb_turno, cb_ref, cb_dia = {}, {}, {}, {}
+    cb_maq, cb_turno, cb_ref, cb_dia, cb_op = {}, {}, {}, {}, {}
     for r in f204:
         cb = r.cantidad_clase_b or 0
         kd = r.fecha.isoformat()
@@ -180,10 +180,13 @@ def dashboard(
         kt = turno_label(r.turno)
         cb_turno[kt] = cb_turno.get(kt, 0) + cb
         cb_ref[ref_nombre(r)] = cb_ref.get(ref_nombre(r), 0) + cb
+        kop = (r.orden_produccion or "").strip() or "Sin OP"
+        cb_op[kop] = cb_op.get(kop, 0) + cb
     claseb = {
         "por_maquina": _ranking(cb_maq),
         "por_turno": _ranking(cb_turno),
         "por_referencia": _ranking(cb_ref),
+        "por_op": _ranking(cb_op),
         "tendencia": [{"fecha": d, "total": cb_dia[d]} for d in sorted(cb_dia)],
     }
 

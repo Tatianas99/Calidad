@@ -16,7 +16,7 @@ type DashData = {
   desde: string | null; hasta: string | null
   filtracion: { por_turno: Pct[]; por_maquina: Pct[]; por_referencia: Pct[]; tendencia: TendPct }
   agua: { ph: AguaMet; cloro: AguaMet }
-  claseb: { por_maquina: Tot[]; por_turno: Tot[]; por_referencia: Tot[]; tendencia: TendTot }
+  claseb: { por_maquina: Tot[]; por_turno: Tot[]; por_referencia: Tot[]; por_op: Tot[]; tendencia: TendTot }
   rollos: { por_proveedor: Tot[]; por_turno: Tot[]; por_proceso: Tot[]; tendencia: TendTot }
   rutas: { cobertura: Mat; nc: Mat }
 }
@@ -31,15 +31,117 @@ const esMismoMes = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && 
 const pctItems = (a: Pct[]): BarItem[] => a.slice(0, 12).map((x) => ({ label: x.clave, value: x.pct, valueText: `${x.pct}%`, sub: `${x.nc} de ${x.muestra}` }))
 const totItems = (a: Tot[]): BarItem[] => a.slice(0, 12).map((x) => ({ label: x.clave, value: x.total, valueText: String(x.total) }))
 
-function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Bloque({ titulo, accion, children }: { titulo: string; accion?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="panel dash-block">
-      <h3 style={{ marginTop: 0 }}>{titulo}</h3>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <h3 style={{ margin: 0 }}>{titulo}</h3>
+        {accion}
+      </div>
       {children}
     </div>
   )
 }
 function Sub({ t }: { t: string }) { return <div className="dash-sub">{t}</div> }
+
+// ---- Resumen ejecutivo de Clase B (informe sobre el rango del dashboard) ---- #
+const ddmm = (iso: string) => { const [y, m, d2] = iso.split('-'); return `${d2}/${m}` }
+const nf = (n: number) => Math.round(n).toLocaleString('es-CO')
+
+function ResumenClaseB({ claseb, periodo, onClose }: { claseb: DashData['claseb']; periodo: string; onClose: () => void }) {
+  const [modo, setModo] = useState<'referencia' | 'op'>('referencia')
+  const serie = claseb.tendencia
+  const total = serie.reduce((s, x) => s + x.total, 0)
+  const dias = serie.length
+  const prom = dias ? total / dias : 0
+  const pico = serie.reduce((a, b) => (b.total > a.total ? b : a), { fecha: '', total: -1 })
+
+  // Tendencia: promedio/día de la primera mitad vs la segunda.
+  const mid = Math.floor(serie.length / 2)
+  const avg = (arr: TendTot) => (arr.length ? arr.reduce((s, x) => s + x.total, 0) / arr.length : 0)
+  const a1 = avg(serie.slice(0, mid)), a2 = avg(serie.slice(mid))
+  const cambio = a1 ? (a2 - a1) / a1 * 100 : 0
+  const dir = serie.length < 4 ? 'sin tendencia clara (pocos días)' : cambio > 12 ? 'al alza ↑' : cambio < -12 ? 'a la baja ↓' : 'estable →'
+
+  const turnoTop = claseb.por_turno[0]
+  const refTop = claseb.por_referencia[0]
+  const maqTop = claseb.por_maquina[0]
+  const conc3 = total ? claseb.por_referencia.slice(0, 3).reduce((s, x) => s + x.total, 0) / total * 100 : 0
+  const pct = (v: number) => total ? Math.round(v / total * 100) : 0
+
+  const desglose = modo === 'referencia' ? claseb.por_referencia : claseb.por_op
+  let acc = 0
+  const filas = desglose.slice(0, 10).map((x) => { acc += x.total; return { ...x, p: total ? x.total / total * 100 : 0, ac: total ? acc / total * 100 : 0 } })
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ width: 'min(760px, 96vw)' }}>
+        <button className="modal-close" title="Cerrar" onClick={onClose}>×</button>
+        <div className="modal-body">
+          <h3 style={{ marginTop: 0 }}>Resumen de Clase B</h3>
+          <p className="muted" style={{ marginTop: 0 }}>
+            Periodo: <strong>{periodo}</strong>. Clase B = producto retirado del empaque por defectos (aún funcional) que no puede llegar al cliente.
+          </p>
+          {total === 0 ? (
+            <p className="muted">No hay Clase B registrada en el periodo seleccionado.</p>
+          ) : (
+            <>
+              <div className="dash-tiles" style={{ marginBottom: 10 }}>
+                <div className="stat-tile"><div className="stat-num">{nf(total)}</div><div className="stat-lbl">Unidades Clase B</div></div>
+                <div className="stat-tile"><div className="stat-num">{nf(prom)}</div><div className="stat-lbl">Promedio por día</div><div className="muted" style={{ fontSize: '.76rem' }}>{dias} día(s) con registro</div></div>
+                <div className="stat-tile"><div className="stat-num">{nf(pico.total)}</div><div className="stat-lbl">Día pico</div><div className="muted" style={{ fontSize: '.76rem' }}>{pico.fecha ? ddmm(pico.fecha) : '—'}</div></div>
+              </div>
+
+              <h4 style={{ margin: '10px 0 4px' }}>📈 Tendencia</h4>
+              <p style={{ margin: 0 }}>
+                La Clase B viene <strong>{dir}</strong>
+                {serie.length >= 4 && <> — de <strong>{nf(a1)}</strong>/día en la primera mitad del periodo a <strong>{nf(a2)}</strong>/día en la segunda ({cambio >= 0 ? '+' : ''}{Math.round(cambio)}%)</>}.
+                Día de mayor Clase B: <strong>{pico.fecha ? ddmm(pico.fecha) : '—'}</strong> con {nf(pico.total)} unidades.
+              </p>
+
+              <h4 style={{ margin: '12px 0 4px' }}>🕐 Turno</h4>
+              <p style={{ margin: '0 0 4px' }}>
+                {turnoTop ? <>El turno con más Clase B es <strong>{turnoTop.clave}</strong> con {nf(turnoTop.total)} unidades ({pct(turnoTop.total)}% del total).</> : '—'}
+              </p>
+              <p className="muted" style={{ margin: 0, fontSize: '.85rem' }}>
+                {claseb.por_turno.map((t) => `${t.clave}: ${nf(t.total)} (${pct(t.total)}%)`).join('  ·  ')}
+              </p>
+
+              <h4 style={{ margin: '12px 0 4px' }}>🏷️ Referencia más significativa</h4>
+              <p style={{ margin: 0 }}>
+                {refTop ? <><strong>{refTop.clave}</strong> con {nf(refTop.total)} unidades ({pct(refTop.total)}% del total). Las 3 referencias principales concentran <strong>{Math.round(conc3)}%</strong> de la Clase B.</> : '—'}
+              </p>
+
+              <h4 style={{ margin: '12px 0 4px' }}>⚙️ Máquina que más aporta</h4>
+              <p style={{ margin: 0 }}>
+                {maqTop ? <><strong>{maqTop.clave}</strong> con {nf(maqTop.total)} unidades ({pct(maqTop.total)}%).</> : '—'}
+              </p>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', margin: '14px 0 4px' }}>
+                <h4 style={{ margin: 0 }}>Desglose (top 10)</h4>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className={'btn pill-btn ' + (modo === 'referencia' ? 'btn-primary' : 'btn-ghost')} onClick={() => setModo('referencia')}>Por referencia</button>
+                  <button className={'btn pill-btn ' + (modo === 'op' ? 'btn-primary' : 'btn-ghost')} onClick={() => setModo('op')}>Por OP</button>
+                </div>
+              </div>
+              <div className="table-wrap">
+                <table className="ftable">
+                  <thead><tr><th>{modo === 'referencia' ? 'Referencia' : 'OP'}</th><th>Unidades</th><th>%</th><th>Acumulado</th></tr></thead>
+                  <tbody>
+                    {filas.map((f, i) => (
+                      <tr key={i}><td>{f.clave}</td><td>{nf(f.total)}</td><td>{Math.round(f.p)}%</td><td>{Math.round(f.ac)}%</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="muted" style={{ fontSize: '.78rem', marginBottom: 0 }}>Ordenado de mayor a menor. El acumulado ayuda a ver qué pocas {modo === 'referencia' ? 'referencias' : 'OP'} concentran la mayor parte (regla 80/20).</p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const [mes, setMes] = useState(() => primerDiaMes(new Date()))          // mes visto (default: actual)
@@ -49,6 +151,7 @@ export default function Dashboard() {
   const [qDeb, setQDeb] = useState('')
   const [d, setD] = useState<DashData | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [verResumen, setVerResumen] = useState(false)
 
   // Debounce del buscador (no pega al servidor en cada tecla).
   useEffect(() => { const t = setTimeout(() => setQDeb(q), 400); return () => clearTimeout(t) }, [q])
@@ -141,7 +244,10 @@ export default function Dashboard() {
           </Bloque>
 
           {/* Clase B */}
-          <Bloque titulo="Clase B (F-204) — unidades">
+          <Bloque
+            titulo="Clase B (F-204) — unidades"
+            accion={<button className="btn btn-primary" style={{ minHeight: 36 }} onClick={() => setVerResumen(true)}>📋 Resumen de Clase B</button>}
+          >
             <div className="dash-2col">
               <div>
                 <Sub t="Por máquina (Pareto)" />
@@ -179,6 +285,14 @@ export default function Dashboard() {
           <p className="muted" style={{ fontSize: '.78rem' }}>
             Turnos derivados de la hora en F-005 y F-158 (T1 06–14 · T2 14–22 · T3 22–06).
           </p>
+
+          {verResumen && (
+            <ResumenClaseB
+              claseb={d.claseb}
+              periodo={(desde || hasta) ? `${desde || 'inicio'} a ${hasta || 'hoy'}` : 'todo el historial'}
+              onClose={() => setVerResumen(false)}
+            />
+          )}
         </>
       )}
     </div>
