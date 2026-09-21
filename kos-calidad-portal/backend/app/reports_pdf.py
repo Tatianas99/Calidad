@@ -451,3 +451,118 @@ def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: st
         story.append(Paragraph("Sin registros en el rango seleccionado.", _S["muted"]))
     doc.build(story, onFirstPage=_page, onLaterPages=_page)
     return buf.getvalue()
+
+
+# ------------------------- Informe de Clase B ------------------------------ #
+def _num(n) -> str:
+    """Entero con punto de miles (formato es-CO)."""
+    return f"{int(round(n or 0)):,}".replace(",", ".")
+
+
+def _ddmmyyyy(iso: str) -> str:
+    y, m, d = iso.split("-")
+    return f"{d}/{m}/{y}"
+
+
+def _enc_claseb(desde, hasta, usuario, q):
+    txt = [Paragraph("Resumen de Clase B (F-204)", _S["titulo"])]
+    if desde or hasta:
+        fd = desde.strftime("%d/%m/%Y") if desde else "inicio"
+        fh = hasta.strftime("%d/%m/%Y") if hasta else "hoy"
+        txt.append(Paragraph(f"Periodo: {fd} &nbsp;→&nbsp; {fh}", _S["sub"]))
+    else:
+        txt.append(Paragraph("Periodo: todo el historial", _S["sub"]))
+    if q and q.strip():
+        txt.append(Paragraph(f"Filtro: «{_esc(q.strip())}» (OP / referencia / marca)", _S["sub"]))
+    txt.append(Paragraph(f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} · {_esc(usuario)}", _S["sub"]))
+    if _LOGO.exists():
+        logo = Image(str(_LOGO), width=20 * mm, height=20 * mm * 270 / 325)
+        head = Table([[logo, txt]], colWidths=[24 * mm, None])
+    else:
+        head = Table([[txt]])
+    head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+    return [head, Spacer(1, 4),
+            Table([[""]], colWidths=[A4[0] - 30 * mm], rowHeights=[2],
+                  style=TableStyle([("LINEBELOW", (0, 0), (-1, -1), 1.2, BRAND)])),
+            Spacer(1, 6)]
+
+
+def build_claseb_resumen_pdf(resumen: dict, desde, hasta, q, usuario: str) -> bytes:
+    total = resumen["total"]
+    serie = resumen["tendencia"]
+
+    def pct(v):
+        return round(v / total * 100) if total else 0
+
+    def acum_rows(items):
+        filas, acc = [], 0
+        for x in items:
+            acc += x["total"]
+            filas.append([x["clave"], _num(x["total"]), f"{pct(x['total'])}%",
+                          f"{round(acc / total * 100) if total else 0}%"])
+        return filas
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
+                            topMargin=13 * mm, bottomMargin=15 * mm, title="Resumen Clase B")
+    story = _enc_claseb(desde, hasta, usuario, q)
+    story.append(Paragraph(
+        "Clase B = producto retirado del empaque por defectos (aún funcional) que no puede llegar al cliente.",
+        _S["muted"]))
+    story.append(Spacer(1, 6))
+
+    if total == 0:
+        story.append(Paragraph("No hay Clase B registrada en el periodo seleccionado.", _S["muted"]))
+        doc.build(story, onFirstPage=_page, onLaterPages=_page)
+        return buf.getvalue()
+
+    dias = len(serie)
+    prom = total / dias if dias else 0
+    pico = max(serie, key=lambda x: x["total"]) if serie else None
+    n = len(serie); mid = n // 2
+
+    def avg(a):
+        return sum(x["total"] for x in a) / len(a) if a else 0
+    a1, a2 = avg(serie[:mid]), avg(serie[mid:])
+    cambio = (a2 - a1) / a1 * 100 if a1 else 0
+    direc = ("sin tendencia clara (pocos días)" if n < 4 else
+             "al alza" if cambio > 12 else "a la baja" if cambio < -12 else "estable")
+
+    kpi = f"Total: {_num(total)} unid.  ·  Promedio: {_num(prom)}/día ({dias} día(s) con registro)"
+    if pico:
+        kpi += f"  ·  Día pico: {_ddmmyyyy(pico['fecha'])} ({_num(pico['total'])} unid.)"
+    story.append(Paragraph(_esc(kpi), _S["kpi"]))
+
+    comp = resumen.get("comparacion")
+    if comp and comp.get("cambio_pct") is not None:
+        signo = "subió" if comp["cambio_pct"] >= 0 else "bajó"
+        story.append(Paragraph(
+            f"Vs. periodo anterior ({_ddmmyyyy(comp['prev_desde'])}–{_ddmmyyyy(comp['prev_hasta'])}): "
+            f"<b>{signo} {abs(comp['cambio_pct'])}%</b> (antes {_num(comp['prev_total'])} unid.).", _S["sub"]))
+    elif comp:
+        story.append(Paragraph(
+            f"Periodo anterior sin Clase B ({_ddmmyyyy(comp['prev_desde'])}–{_ddmmyyyy(comp['prev_hasta'])}).", _S["sub"]))
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("Tendencia", _S["h2"]))
+    ttxt = f"La Clase B viene <b>{direc}</b>"
+    if n >= 4:
+        ttxt += f" — de {_num(a1)}/día en la primera mitad a {_num(a2)}/día en la segunda ({'+' if cambio >= 0 else ''}{round(cambio)}%)"
+    story.append(Paragraph(ttxt + ".", _S["small"]))
+
+    story.append(Paragraph("Por turno", _S["h2"]))
+    story.append(_tabla_resumen(["Turno", "Unidades", "%"],
+                                [[t["clave"], _num(t["total"]), f"{pct(t['total'])}%"] for t in resumen["por_turno"]]))
+
+    story.append(Paragraph("Referencias con más Clase B (top 10)", _S["h2"]))
+    story.append(_tabla_resumen(["Referencia", "Unidades", "%", "Acum."], acum_rows(resumen["por_referencia"][:10])))
+
+    story.append(Paragraph("OP con más Clase B (top 10)", _S["h2"]))
+    story.append(_tabla_resumen(["OP", "Unidades", "%", "Acum."], acum_rows(resumen["por_op"][:10])))
+
+    story.append(Paragraph("Máquinas con más Clase B (top 10)", _S["h2"]))
+    story.append(_tabla_resumen(["Máquina", "Unidades", "%"],
+                                [[m["clave"], _num(m["total"]), f"{pct(m['total'])}%"] for m in resumen["por_maquina"][:10]]))
+
+    doc.build(story, onFirstPage=_page, onLaterPages=_page)
+    return buf.getvalue()

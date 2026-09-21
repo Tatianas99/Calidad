@@ -11,7 +11,8 @@ from ..db import get_db
 from .. import models, schemas
 from ..auth import get_current_user
 from ..reports_excel import build_f006_workbook, build_f015_workbook
-from ..reports_pdf import build_report_pdf
+from ..reports_pdf import build_report_pdf, build_claseb_resumen_pdf
+from ..claseb_resumen import resumen_claseb
 
 router = APIRouter(prefix="/reports", tags=["Reportes"])
 
@@ -58,6 +59,23 @@ def reporte_pdf(
     return StreamingResponse(
         BytesIO(pdf), media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
+
+
+@router.get("/claseb-resumen-pdf")
+def reporte_claseb_resumen(
+    desde: Optional[date] = Query(None),
+    hasta: Optional[date] = Query(None),
+    q: Optional[str] = Query(None, description="Filtro por OP / referencia / marca"),
+    user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Informe ejecutivo de Clase B (F-204) en PDF, para el rango y filtro dados."""
+    resumen = resumen_claseb(db, desde, hasta, q)
+    pdf = build_claseb_resumen_pdf(resumen, desde, hasta, q, user.nombre)
+    return StreamingResponse(
+        BytesIO(pdf), media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="resumen_claseb.pdf"'},
     )
 
 

@@ -21,6 +21,7 @@ from .. import models
 from ..auth import require
 from ..config import PH_MIN, PH_MAX, CLORO_MIN, CLORO_MAX
 from ..constants_f158 import PROCESO_LABEL
+from ..claseb_resumen import resumen_claseb
 from .turnos import cargar_horarios, turno_de
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -166,29 +167,8 @@ def dashboard(
     }
 
     # ---------------- Clase B (F-204) ---------------- #
-    f204 = _rango(db.query(models.F204Registro), models.F204Registro.fecha).all()
-    if tokens:
-        f204 = [r for r in f204 if _match(tokens, f"{r.orden_produccion or ''} {ref_nombre(r)}")]
-    cb_maq, cb_turno, cb_ref, cb_dia, cb_op = {}, {}, {}, {}, {}
-    for r in f204:
-        cb = r.cantidad_clase_b or 0
-        kd = r.fecha.isoformat()
-        cb_dia[kd] = cb_dia.get(kd, 0) + cb
-        if cb == 0:
-            continue
-        cb_maq[maq_nombre(r)] = cb_maq.get(maq_nombre(r), 0) + cb
-        kt = turno_label(r.turno)
-        cb_turno[kt] = cb_turno.get(kt, 0) + cb
-        cb_ref[ref_nombre(r)] = cb_ref.get(ref_nombre(r), 0) + cb
-        kop = (r.orden_produccion or "").strip() or "Sin OP"
-        cb_op[kop] = cb_op.get(kop, 0) + cb
-    claseb = {
-        "por_maquina": _ranking(cb_maq),
-        "por_turno": _ranking(cb_turno),
-        "por_referencia": _ranking(cb_ref),
-        "por_op": _ranking(cb_op),
-        "tendencia": [{"fecha": d, "total": cb_dia[d]} for d in sorted(cb_dia)],
-    }
+    # Agregados + comparación con el periodo anterior (fuente compartida con el PDF).
+    claseb = resumen_claseb(db, desde, hasta, q)
 
     # ---------------- Liberación de rollos (F-005) ---------------- #
     f5 = _rango(db.query(models.F005Registro), models.F005Registro.fecha).all()

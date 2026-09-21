@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiGet } from '../lib/api'
+import { apiGet, apiBaseUrl } from '../lib/api'
+import { getToken } from '../lib/auth'
 import { BarList, VBars, LineMetric, Pareto, Composicion, TrendLine, Matriz, type BarItem } from '../components/Charts'
 
 const AZUL = 'var(--ch-1)'   // volumen / actividad
@@ -10,13 +11,14 @@ type Tot = { clave: string; total: number }
 type Serie = { t: string; v: number }[]
 type TendPct = { fecha: string; pct: number; nc: number; muestra: number }[]
 type TendTot = { fecha: string; total: number }[]
+type Comparacion = { prev_desde: string; prev_hasta: string; prev_total: number; cambio_pct: number | null } | null
 type AguaMet = { fuera: number; total: number; fuera_pct: number; min: number; max: number; serie: Serie }
 type Mat = { turnos: string[]; filas: { proceso: string; valores: number[]; total: number }[] }
 type DashData = {
   desde: string | null; hasta: string | null
   filtracion: { por_turno: Pct[]; por_maquina: Pct[]; por_referencia: Pct[]; tendencia: TendPct }
   agua: { ph: AguaMet; cloro: AguaMet }
-  claseb: { por_maquina: Tot[]; por_turno: Tot[]; por_referencia: Tot[]; por_op: Tot[]; tendencia: TendTot }
+  claseb: { total?: number; por_maquina: Tot[]; por_turno: Tot[]; por_referencia: Tot[]; por_op: Tot[]; tendencia: TendTot; comparacion?: Comparacion }
   rollos: { por_proveedor: Tot[]; por_turno: Tot[]; por_proceso: Tot[]; tendencia: TendTot }
   rutas: { cobertura: Mat; nc: Mat }
 }
@@ -48,8 +50,27 @@ function Sub({ t }: { t: string }) { return <div className="dash-sub">{t}</div> 
 const ddmm = (iso: string) => { const [y, m, d2] = iso.split('-'); return `${d2}/${m}` }
 const nf = (n: number) => Math.round(n).toLocaleString('es-CO')
 
-function ResumenClaseB({ claseb, periodo, onClose }: { claseb: DashData['claseb']; periodo: string; onClose: () => void }) {
+function ResumenClaseB({ claseb, periodo, desde, hasta, q, onClose }: { claseb: DashData['claseb']; periodo: string; desde: string; hasta: string; q: string; onClose: () => void }) {
   const [modo, setModo] = useState<'referencia' | 'op'>('referencia')
+  const [bajando, setBajando] = useState(false)
+
+  async function descargarPDF() {
+    setBajando(true)
+    try {
+      const qs = new URLSearchParams()
+      if (desde) qs.set('desde', desde)
+      if (hasta) qs.set('hasta', hasta)
+      if (q.trim()) qs.set('q', q.trim())
+      const res = await fetch(`${apiBaseUrl()}/reports/claseb-resumen-pdf?${qs.toString()}`, { headers: { Authorization: `Bearer ${getToken()}` } })
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob); a.download = 'resumen_claseb.pdf'
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+    } catch { window.alert('No se pudo generar el PDF') } finally { setBajando(false) }
+  }
+
   const serie = claseb.tendencia
   const total = serie.reduce((s, x) => s + x.total, 0)
   const dias = serie.length
@@ -78,9 +99,16 @@ function ResumenClaseB({ claseb, periodo, onClose }: { claseb: DashData['claseb'
       <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ width: 'min(760px, 96vw)' }}>
         <button className="modal-close" title="Cerrar" onClick={onClose}>×</button>
         <div className="modal-body">
-          <h3 style={{ marginTop: 0 }}>Resumen de Clase B</h3>
-          <p className="muted" style={{ marginTop: 0 }}>
-            Periodo: <strong>{periodo}</strong>. Clase B = producto retirado del empaque por defectos (aún funcional) que no puede llegar al cliente.
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>Resumen de Clase B</h3>
+            {total > 0 && (
+              <button className="btn btn-ghost" style={{ minHeight: 36 }} disabled={bajando} onClick={descargarPDF}>
+                {bajando ? 'Generando…' : '📄 Descargar PDF'}
+              </button>
+            )}
+          </div>
+          <p className="muted" style={{ marginTop: 4 }}>
+            Periodo: <strong>{periodo}</strong>{q.trim() && <> · Filtro: <strong>«{q.trim()}»</strong></>}. Clase B = producto retirado del empaque por defectos (aún funcional) que no puede llegar al cliente.
           </p>
           {total === 0 ? (
             <p className="muted">No hay Clase B registrada en el periodo seleccionado.</p>
@@ -91,6 +119,15 @@ function ResumenClaseB({ claseb, periodo, onClose }: { claseb: DashData['claseb'
                 <div className="stat-tile"><div className="stat-num">{nf(prom)}</div><div className="stat-lbl">Promedio por día</div><div className="muted" style={{ fontSize: '.76rem' }}>{dias} día(s) con registro</div></div>
                 <div className="stat-tile"><div className="stat-num">{nf(pico.total)}</div><div className="stat-lbl">Día pico</div><div className="muted" style={{ fontSize: '.76rem' }}>{pico.fecha ? ddmm(pico.fecha) : '—'}</div></div>
               </div>
+
+              {claseb.comparacion && claseb.comparacion.cambio_pct !== null && (
+                <p style={{ margin: '0 0 8px' }}>
+                  Vs. periodo anterior ({ddmm(claseb.comparacion.prev_desde)}–{ddmm(claseb.comparacion.prev_hasta)}):{' '}
+                  <strong style={{ color: claseb.comparacion.cambio_pct >= 0 ? 'var(--bad)' : 'var(--ok)' }}>
+                    {claseb.comparacion.cambio_pct >= 0 ? '▲ subió' : '▼ bajó'} {Math.abs(claseb.comparacion.cambio_pct)}%
+                  </strong>{' '}(antes {nf(claseb.comparacion.prev_total)} unid.).
+                </p>
+              )}
 
               <h4 style={{ margin: '10px 0 4px' }}>📈 Tendencia</h4>
               <p style={{ margin: 0 }}>
@@ -290,6 +327,7 @@ export default function Dashboard() {
             <ResumenClaseB
               claseb={d.claseb}
               periodo={(desde || hasta) ? `${desde || 'inicio'} a ${hasta || 'hoy'}` : 'todo el historial'}
+              desde={desde} hasta={hasta} q={qDeb}
               onClose={() => setVerResumen(false)}
             />
           )}
