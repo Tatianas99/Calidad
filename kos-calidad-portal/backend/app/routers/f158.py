@@ -125,15 +125,17 @@ def editar_recorrido(
     user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Edita un recorrido. Solo el usuario que lo registró y solo el mismo día."""
+    """Edita un recorrido. Solo el usuario que lo registró (o admin) y dentro de
+    10 h desde que se registró (sin importar el cambio de día; así el turno 3 no
+    pierde la edición al pasar la medianoche)."""
     reg = db.get(models.F158Recorrido, recorrido_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Recorrido no encontrado")
     es_admin = user.rol == "admin"
     if reg.responsable_id != user.id and not es_admin:
         raise HTTPException(status_code=403, detail="Solo el responsable puede editar su recorrido")
-    if reg.fecha != today_co() and not es_admin:
-        raise HTTPException(status_code=403, detail="Solo se puede editar el mismo día del registro")
+    if not es_admin and reg.creado_en and now_co() - reg.creado_en > timedelta(hours=10):
+        raise HTTPException(status_code=403, detail="El plazo para editar venció (10 h desde que se registró)")
 
     reg.maquina = data.maquina
     reg.observaciones = data.observaciones
