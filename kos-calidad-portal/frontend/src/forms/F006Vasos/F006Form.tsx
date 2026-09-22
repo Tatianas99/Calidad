@@ -269,16 +269,18 @@ export default function F006Form({
     feedback(!r.ok)
   }
 
-  async function registrarResultado(prodId: string, filt: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) {
-    const nocumple = filt.cantidad_muestra - cumple
+  async function registrarResultado(prodId: string, filt: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string, muestra?: number) {
+    const muestraFinal = muestra ?? filt.cantidad_muestra  // admin puede corregir el tamaño de muestra
+    const nocumple = muestraFinal - cumple
     mapProd(prodId, (p) => ({
       ...p,
       filtraciones: p.filtraciones.map((f) =>
-        f.id === filt.id ? { ...f, estado: 'finalizada', cantidad_cumple: cumple, cantidad_nocumple: nocumple, goteo_vaso_tapa: goteo, tapa_centrada: tapa, comentario } : f,
+        f.id === filt.id ? { ...f, estado: 'finalizada', cantidad_muestra: muestraFinal, cantidad_cumple: cumple, cantidad_nocumple: nocumple, goteo_vaso_tapa: goteo, tapa_centrada: tapa, comentario } : f,
       ),
     }))
     const r = await apiMutate('PATCH', `/f006/filtracion/${filt.id}`, {
       cantidad_cumple: cumple, cantidad_nocumple: nocumple, goteo_vaso_tapa: goteo, tapa_centrada: tapa, comentario,
+      ...(muestra !== undefined ? { cantidad_muestra: muestra } : {}),
     })
     feedback(!r.ok)
   }
@@ -422,7 +424,7 @@ export default function F006Form({
               onEmbalaje={(item, r) => cambiarEmbalaje(selected.registroId, item, r)}
               onMontar={(tp, tm, c, temp) => montarFiltracion(selected.registroId, tp, tm, c, temp)}
               onMontarParada={() => montarParada(selected.registroId)}
-              onResultado={(f, c, goteo, tapa, com) => registrarResultado(selected.registroId, f, c, goteo, tapa, com)}
+              onResultado={(f, c, goteo, tapa, com, muestra) => registrarResultado(selected.registroId, f, c, goteo, tapa, com, muestra)}
               onFirmas={(patch) => patchProd(selected.registroId, patch)}
               onFinalizar={() => finalizarProducto(selected.registroId)}
               filtDef={filtDef}
@@ -450,7 +452,7 @@ function ProductoDetalle({
   onEmbalaje: (item: string, resultado: string) => void
   onMontar: (tp: string, tm: string, cant: number, temp90: string) => void
   onMontarParada: () => void
-  onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) => void
+  onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string, muestra?: number) => void
   onFirmas: (patch: Partial<Producto>) => void
   onFinalizar: () => void
   filtDef: FiltDef
@@ -672,12 +674,15 @@ function FiltracionCard({
   opts: Opciones | null
   now: number
   productoLabel: string
-  onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string) => void
+  onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string, muestra?: number) => void
 }) {
   const [cumple, setCumple] = useState('')
   const [goteo, setGoteo] = useState('')
   const [tapa, setTapa] = useState('')
   const [comentario, setComentario] = useState('')
+  const [editando, setEditando] = useState(false)
+  const admin = getUser()?.rol === 'admin'
+  const [muestra, setMuestra] = useState(String(f.cantidad_muestra))
   const resOpts = (opts?.resultados ?? ['C', 'NC', 'N/A']).map((r) => ({ value: r, label: r }))
 
   const restante = FILT_MS - (now - f.montadaEnMs)
@@ -685,10 +690,15 @@ function FiltracionCard({
   const mm = Math.max(0, Math.floor(restante / 60000))
   const ss = Math.max(0, Math.floor((restante % 60000) / 1000))
 
+  const enEdicion = f.estado === 'en_proceso' || editando
+  // El admin puede corregir el tamaño de muestra (por si se equivocaron al montar).
+  const editaMuestra = admin && enEdicion
+  const muestraNum = editaMuestra ? Math.max(0, Number(muestra) || 0) : f.cantidad_muestra
+
   const cumpleNum = cumple === '' ? null : Number(cumple)
-  const excede = cumpleNum !== null && cumpleNum > f.cantidad_muestra
+  const excede = cumpleNum !== null && cumpleNum > muestraNum
   const invalido = cumpleNum === null || cumpleNum < 0 || excede
-  const nocumpleCalc = cumpleNum === null || excede ? null : f.cantidad_muestra - cumpleNum
+  const nocumpleCalc = cumpleNum === null || excede ? null : muestraNum - cumpleNum
 
   const prueba = opts ? labelOf(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba
   const material = opts ? labelOf(opts.tipos_material_f006, f.tipo_material) : f.tipo_material
@@ -700,17 +710,16 @@ function FiltracionCard({
   const ocultarTapa = esRasgado && esPortaPapa
 
   // Edición de un resultado ya registrado (antes de finalizar el producto).
-  const [editando, setEditando] = useState(false)
-  const enEdicion = f.estado === 'en_proceso' || editando
   const iniciarEdicion = () => {
     setCumple(f.cantidad_cumple != null ? String(f.cantidad_cumple) : '')
     setGoteo(f.goteo_vaso_tapa || '')
     setTapa(f.tapa_centrada || '')
     setComentario(f.comentario || '')
+    setMuestra(String(f.cantidad_muestra))
     setEditando(true)
   }
   const guardar = () => {
-    onResultado(f, Number(cumple), ocultarTapa ? '' : goteo, ocultarTapa ? '' : tapa, comentario)
+    onResultado(f, Number(cumple), ocultarTapa ? '' : goteo, ocultarTapa ? '' : tapa, comentario, editaMuestra ? muestraNum : undefined)
     setEditando(false)
   }
 
@@ -758,7 +767,7 @@ function FiltracionCard({
         </span>
       </div>
       <p className="muted" style={{ margin: '0 0 8px' }}>
-        Montada a las {hhmm(f.montadaEnMs)} · Muestra: {f.cantidad_muestra}
+        Montada a las {hhmm(f.montadaEnMs)} · Muestra: {muestraNum}
       </p>
 
       {enEdicion ? (
@@ -768,10 +777,16 @@ function FiltracionCard({
               {listo ? 'Muestra lista (20 min cumplidos)' : `Faltan ${mm}:${String(ss).padStart(2, '0')} para leer`}
             </p>
           )}
+          {editaMuestra && (
+            <Field label="Tamaño de muestra" hint="corregir · solo admin">
+              <input type="number" min={1} inputMode="numeric" value={muestra}
+                onChange={(e) => setMuestra(e.target.value)} style={{ maxWidth: 180 }} />
+            </Field>
+          )}
           <div className="row">
-            <Field label="Cumple (no filtra)" hint={`máximo ${f.cantidad_muestra}`}>
+            <Field label="Cumple (no filtra)" hint={`máximo ${muestraNum}`}>
               <input
-                type="number" min={0} max={f.cantidad_muestra} inputMode="numeric" value={cumple}
+                type="number" min={0} max={muestraNum} inputMode="numeric" value={cumple}
                 onChange={(e) => setCumple(e.target.value)}
                 style={excede ? { borderColor: 'var(--bad)', background: 'var(--bad-bg)' } : undefined}
               />
@@ -781,7 +796,7 @@ function FiltracionCard({
             </Field>
           </div>
           {excede && (
-            <p className="tag-bad">La cantidad que cumple no puede ser mayor a la muestra ({f.cantidad_muestra}).</p>
+            <p className="tag-bad">La cantidad que cumple no puede ser mayor a la muestra ({muestraNum}).</p>
           )}
           {/* Rasgado en producto "porta papa" (sin tapa): no lleva preguntas de tapa,
               solo cumple y observaciones. En otros productos, rasgado sí las pide. */}

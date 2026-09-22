@@ -162,12 +162,16 @@ def agregar_filtracion(
 
 @router.patch("/filtracion/{filtracion_id}", response_model=schemas.FiltracionOut)
 def registrar_resultado(
-    filtracion_id: str, data: schemas.FiltracionResultado, db: Session = Depends(get_db)
+    filtracion_id: str, data: schemas.FiltracionResultado,
+    user: models.Usuario = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     """Registra el resultado tras el tiempo de muestra (20 min): cumple / no cumple."""
     f = db.get(models.F006Filtracion, filtracion_id)
     if not f:
         raise HTTPException(status_code=404, detail="Prueba de filtración no encontrada")
+    # El tamaño de muestra solo lo puede corregir un admin (por si se equivocaron).
+    if data.cantidad_muestra is not None and user.rol == "admin":
+        f.cantidad_muestra = data.cantidad_muestra
     f.cantidad_cumple = data.cantidad_cumple
     f.cantidad_nocumple = data.cantidad_nocumple
     f.goteo_vaso_tapa = data.goteo_vaso_tapa
