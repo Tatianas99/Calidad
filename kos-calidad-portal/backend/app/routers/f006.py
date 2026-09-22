@@ -169,9 +169,13 @@ def registrar_resultado(
     f = db.get(models.F006Filtracion, filtracion_id)
     if not f:
         raise HTTPException(status_code=404, detail="Prueba de filtración no encontrada")
-    # El tamaño de muestra solo lo puede corregir un admin (por si se equivocaron).
-    if data.cantidad_muestra is not None and user.rol == "admin":
+    # Al montar masivamente la muestra queda vacía: cualquiera la fija al registrar.
+    # Corregir una muestra ya puesta solo lo puede hacer un admin.
+    if data.cantidad_muestra is not None and (user.rol == "admin" or f.cantidad_muestra is None):
         f.cantidad_muestra = data.cantidad_muestra
+    # "Máquina parada" al registrar (p. ej. una prueba montada masivamente).
+    if data.maquina_parada is not None:
+        f.maquina_parada = data.maquina_parada
     f.cantidad_cumple = data.cantidad_cumple
     f.cantidad_nocumple = data.cantidad_nocumple
     f.goteo_vaso_tapa = data.goteo_vaso_tapa

@@ -129,7 +129,8 @@ class FiltracionResultado(BaseModel):
     goteo_vaso_tapa: Optional[str] = None  # C|NC|NA
     tapa_centrada: Optional[str] = None    # C|NC|NA
     comentario: Optional[str] = None
-    cantidad_muestra: Optional[int] = Field(default=None, ge=1)  # corregir tamaño de muestra (solo admin)
+    cantidad_muestra: Optional[int] = Field(default=None, ge=1)  # fijar/corregir tamaño de muestra
+    maquina_parada: Optional[bool] = None  # marcar la prueba como "máquina parada" al registrar
 
 
 class FirmasUpdate(BaseModel):

@@ -19,7 +19,7 @@ type LocalFiltracion = {
   maquina_parada?: boolean
   tipo_prueba: string
   tipo_material: string
-  cantidad_muestra: number
+  cantidad_muestra: number | null   // null = montada masivamente, falta la muestra
   temp_90?: string
   montadaEnMs: number
   estado: 'en_proceso' | 'finalizada'
@@ -244,7 +244,7 @@ export default function F006Form({
     programarGuardarEmbalaje(prodId)
   }
 
-  async function montarFiltracion(prodId: string, tp: string, tm: string, cant: number, temp90: string) {
+  async function montarFiltracion(prodId: string, tp: string, tm: string, cant: number | null, temp90: string) {
     const id = uuid()
     const nueva: LocalFiltracion = {
       id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant, temp_90: temp90 || undefined,
@@ -253,6 +253,35 @@ export default function F006Form({
     mapProd(prodId, (p) => ({ ...p, filtraciones: [nueva, ...p.filtraciones] }))
     const r = await apiMutate('POST', `/f006/registros/${prodId}/filtracion`, {
       id, tipo_prueba: tp, tipo_material: tm, cantidad_muestra: cant, temp_90: temp90 || null,
+    })
+    feedback(!r.ok)
+  }
+
+  // Montaje masivo: una prueba en cada producto activo con la configuración
+  // predeterminada (tipo de prueba y papel ya elegidos), SIN cantidad de muestra
+  // (se pide al registrar el resultado). Requiere que ya exista esa configuración.
+  async function montarMasivo() {
+    const { tp, tm, temp90 } = filtDef
+    if (!tp || !tm) { flash('Primero monta una prueba para fijar el tipo de prueba y papel'); return }
+    const activos = stRef.current.productos.filter((p) => (p.referencia_texto || '').trim() && !!p.maquina)
+    if (activos.length === 0) { flash('No hay productos con referencia y máquina en el turno'); return }
+    for (const p of activos) {
+      if (!p.guardado) await maybeGuardarCabecera(p)
+      await montarFiltracion(p.registroId, tp, tm, null, temp90)
+    }
+    flash(`Montadas ${activos.length} prueba(s). Falta la cantidad de muestra: se pide al registrar.`)
+  }
+
+  // Marca como "Máquina parada" una prueba ya montada (p. ej. una masiva) al registrarla.
+  async function registrarParadaExistente(prodId: string, filt: LocalFiltracion, comentario: string) {
+    mapProd(prodId, (p) => ({
+      ...p,
+      filtraciones: p.filtraciones.map((f) =>
+        f.id === filt.id ? { ...f, maquina_parada: true, estado: 'finalizada', cantidad_cumple: 0, cantidad_nocumple: 0, goteo_vaso_tapa: undefined, tapa_centrada: undefined, comentario } : f,
+      ),
+    }))
+    const r = await apiMutate('PATCH', `/f006/filtracion/${filt.id}`, {
+      cantidad_cumple: 0, cantidad_nocumple: 0, comentario, maquina_parada: true,
     })
     feedback(!r.ok)
   }
@@ -270,7 +299,7 @@ export default function F006Form({
   }
 
   async function registrarResultado(prodId: string, filt: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string, muestra?: number) {
-    const muestraFinal = muestra ?? filt.cantidad_muestra  // admin puede corregir el tamaño de muestra
+    const muestraFinal = muestra ?? filt.cantidad_muestra ?? 0  // se fija/corrige el tamaño de muestra
     const nocumple = muestraFinal - cumple
     mapProd(prodId, (p) => ({
       ...p,
@@ -326,6 +355,9 @@ export default function F006Form({
     .filter((r) => r.registrado_por_id === miUsuarioId && (r.operario_nombre || r.empacador_nombre) && dentro8h(r.creado_en))
     .sort((a, b) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime())
 
+  const admin = getUser()?.rol === 'admin'
+  const hayConfig = !!(filtDef.tp && filtDef.tm)
+
   return (
     <div>
       <div className="btn-row" style={{ marginBottom: 6 }}>
@@ -334,6 +366,18 @@ export default function F006Form({
       <div className="section-title">
         <span className="code">F-006</span>
         <h2>Ruta control proceso vasos — Turno</h2>
+        {admin && (
+          <button
+            className="btn btn-primary" style={{ marginLeft: 'auto', minHeight: 38 }}
+            disabled={!hayConfig}
+            title={hayConfig
+              ? 'Monta una prueba en cada producto activo del turno con el tipo de prueba y papel ya elegidos'
+              : 'Primero monta una prueba (así se fija el tipo de prueba y papel)'}
+            onClick={montarMasivo}
+          >
+            ⚡ Montar pruebas masivamente
+          </button>
+        )}
       </div>
 
       <div className="f006-layout">
@@ -425,6 +469,7 @@ export default function F006Form({
               onMontar={(tp, tm, c, temp) => montarFiltracion(selected.registroId, tp, tm, c, temp)}
               onMontarParada={() => montarParada(selected.registroId)}
               onResultado={(f, c, goteo, tapa, com, muestra) => registrarResultado(selected.registroId, f, c, goteo, tapa, com, muestra)}
+              onParada={(f, com) => registrarParadaExistente(selected.registroId, f, com)}
               onFirmas={(patch) => patchProd(selected.registroId, patch)}
               onFinalizar={() => finalizarProducto(selected.registroId)}
               filtDef={filtDef}
@@ -440,7 +485,7 @@ export default function F006Form({
 }
 
 function ProductoDetalle({
-  prod, initialTab, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onMontarParada, onResultado, onFirmas, onFinalizar, filtDef, setFiltDef,
+  prod, initialTab, personas, opts, now, onCabecera, onPatch, onEmbalaje, onMontar, onMontarParada, onResultado, onParada, onFirmas, onFinalizar, filtDef, setFiltDef,
 }: {
   prod: Producto
   initialTab: Tab
@@ -453,6 +498,7 @@ function ProductoDetalle({
   onMontar: (tp: string, tm: string, cant: number, temp90: string) => void
   onMontarParada: () => void
   onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string, muestra?: number) => void
+  onParada: (f: LocalFiltracion, comentario: string) => void
   onFirmas: (patch: Partial<Producto>) => void
   onFinalizar: () => void
   filtDef: FiltDef
@@ -551,7 +597,7 @@ function ProductoDetalle({
           {cabeceraCompleta && opts && <NuevaFiltracion opts={opts} onMontar={onMontar} onMontarParada={onMontarParada} filtDef={filtDef} setFiltDef={setFiltDef} />}
           {prod.filtraciones.length === 0 && cabeceraCompleta && <p className="muted">Aún no hay pruebas montadas.</p>}
           {prod.filtraciones.map((f) => (
-            <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={(prod.referencia_texto || '') + (prod.marca ? ` ${prod.marca}` : '')} onResultado={onResultado} />
+            <FiltracionCard key={f.id} f={f} opts={opts} now={now} productoLabel={(prod.referencia_texto || '') + (prod.marca ? ` ${prod.marca}` : '')} onResultado={onResultado} onParada={onParada} />
           ))}
           <div className="btn-row" style={{ marginTop: 16, justifyContent: 'flex-end' }}>
             <button className="btn btn-primary" onClick={() => setTab('firmas')}>Siguiente →</button>
@@ -668,13 +714,14 @@ function NuevaFiltracion({ opts, onMontar, onMontarParada, filtDef, setFiltDef }
 }
 
 function FiltracionCard({
-  f, opts, now, productoLabel, onResultado,
+  f, opts, now, productoLabel, onResultado, onParada,
 }: {
   f: LocalFiltracion
   opts: Opciones | null
   now: number
   productoLabel: string
   onResultado: (f: LocalFiltracion, cumple: number, goteo: string, tapa: string, comentario: string, muestra?: number) => void
+  onParada: (f: LocalFiltracion, comentario: string) => void
 }) {
   const [cumple, setCumple] = useState('')
   const [goteo, setGoteo] = useState('')
@@ -682,7 +729,7 @@ function FiltracionCard({
   const [comentario, setComentario] = useState('')
   const [editando, setEditando] = useState(false)
   const admin = getUser()?.rol === 'admin'
-  const [muestra, setMuestra] = useState(String(f.cantidad_muestra))
+  const [muestra, setMuestra] = useState(f.cantidad_muestra != null ? String(f.cantidad_muestra) : '')
   const resOpts = (opts?.resultados ?? ['C', 'NC', 'N/A']).map((r) => ({ value: r, label: r }))
 
   const restante = FILT_MS - (now - f.montadaEnMs)
@@ -691,13 +738,16 @@ function FiltracionCard({
   const ss = Math.max(0, Math.floor((restante % 60000) / 1000))
 
   const enEdicion = f.estado === 'en_proceso' || editando
-  // El admin puede corregir el tamaño de muestra (por si se equivocaron al montar).
-  const editaMuestra = admin && enEdicion
-  const muestraNum = editaMuestra ? Math.max(0, Number(muestra) || 0) : f.cantidad_muestra
+  // Muestra "pendiente": prueba montada masivamente (aún sin muestra). Cualquiera la
+  // fija al registrar; un admin además puede corregir una muestra ya puesta.
+  const sinMuestra = !f.maquina_parada && f.cantidad_muestra == null
+  const editaMuestra = enEdicion && (admin || sinMuestra)
+  const muestraNum = editaMuestra ? Math.max(0, Number(muestra) || 0) : (f.cantidad_muestra ?? 0)
 
   const cumpleNum = cumple === '' ? null : Number(cumple)
   const excede = cumpleNum !== null && cumpleNum > muestraNum
-  const invalido = cumpleNum === null || cumpleNum < 0 || excede
+  const faltaMuestra = sinMuestra && !(muestraNum > 0)   // no se puede registrar sin muestra
+  const invalido = cumpleNum === null || cumpleNum < 0 || excede || faltaMuestra
   const nocumpleCalc = cumpleNum === null || excede ? null : muestraNum - cumpleNum
 
   const prueba = opts ? labelOf(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba
@@ -715,7 +765,7 @@ function FiltracionCard({
     setGoteo(f.goteo_vaso_tapa || '')
     setTapa(f.tapa_centrada || '')
     setComentario(f.comentario || '')
-    setMuestra(String(f.cantidad_muestra))
+    setMuestra(f.cantidad_muestra != null ? String(f.cantidad_muestra) : '')
     setEditando(true)
   }
   const guardar = () => {
@@ -767,7 +817,7 @@ function FiltracionCard({
         </span>
       </div>
       <p className="muted" style={{ margin: '0 0 8px' }}>
-        Montada a las {hhmm(f.montadaEnMs)} · Muestra: {muestraNum}
+        Montada a las {hhmm(f.montadaEnMs)} · Muestra: {sinMuestra && muestraNum === 0 ? 'por definir' : muestraNum}
       </p>
 
       {enEdicion ? (
@@ -778,10 +828,16 @@ function FiltracionCard({
             </p>
           )}
           {editaMuestra && (
-            <Field label="Tamaño de muestra" hint="corregir · solo admin">
-              <input type="number" min={1} inputMode="numeric" value={muestra}
-                onChange={(e) => setMuestra(e.target.value)} style={{ maxWidth: 180 }} />
-            </Field>
+            <div className="row" style={{ alignItems: 'flex-end' }}>
+              <Field label="Cantidad de muestra" hint={sinMuestra ? 'unidades montadas' : 'corregir · solo admin'}>
+                <input type="number" min={1} inputMode="numeric" value={muestra} onChange={(e) => setMuestra(e.target.value)} />
+              </Field>
+              {sinMuestra && (
+                <button className="btn btn-parada" style={{ minHeight: 46 }} onClick={() => onParada(f, comentario)}>
+                  ⛔ Máquina parada
+                </button>
+              )}
+            </div>
           )}
           <div className="row">
             <Field label="Cumple (no filtra)" hint={`máximo ${muestraNum}`}>
