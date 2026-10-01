@@ -4,6 +4,7 @@ import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
 import PdfExport from '../components/PdfExport'
+import { RangoFechas, hoyISO, haceDiasISO } from '../components/RangoFechas'
 import type { Referencia, Maquina, F204Registro } from '../lib/types'
 
 const fh = (iso: string) => {
@@ -17,17 +18,20 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
   const [refs, setRefs] = useState<Referencia[]>([])
   const [maqs, setMaqs] = useState<Maquina[]>([])
   const [cargando, setCargando] = useState(true)
+  const [desde, setDesde] = useState(haceDiasISO(30))
+  const [hasta, setHasta] = useState(hoyISO())
   const admin = getUser()?.rol === 'admin'
 
   const cargar = () => {
     setCargando(true)
-    apiGet<F204Registro[]>('/f204/registros').then(setRows).catch(() => {}).finally(() => setCargando(false))
+    apiGet<F204Registro[]>(`/f204/registros?desde=${desde}&hasta=${hasta}`).then(setRows).catch(() => {}).finally(() => setCargando(false))
   }
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
     apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
-    cargar()
   }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [desde, hasta])
 
   // La referencia ahora viene de la OP como texto; la FK vieja es respaldo.
   const refName = (reg: F204Registro) => {
@@ -106,6 +110,7 @@ export default function RegistrosF204({ onEditar, onBack }: { onEditar?: (id: st
           <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
         </div>
       </div>
+      <RangoFechas desde={desde} hasta={hasta} setDesde={setDesde} setHasta={setHasta} />
       {cargando ? <p className="muted">Cargando…</p> : (
         <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} renderDetail={renderDetail} />
       )}

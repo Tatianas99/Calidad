@@ -4,6 +4,7 @@ import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
 import PdfExport from '../components/PdfExport'
+import { RangoFechas, hoyISO, haceDiasISO } from '../components/RangoFechas'
 import type { F005Registro } from '../lib/types'
 
 const fh = (iso: string) => {
@@ -26,12 +27,15 @@ export default function RegistrosF005({ onEditar, onBack }: { onEditar?: (id: st
   const [rows, setRows] = useState<F005Registro[]>([])
   const [cargando, setCargando] = useState(true)
   const admin = getUser()?.rol === 'admin'
+  const [desde, setDesde] = useState(haceDiasISO(30))
+  const [hasta, setHasta] = useState(hoyISO())
 
   const cargar = () => {
     setCargando(true)
-    apiGet<F005Registro[]>('/f005/registros').then(setRows).catch(() => {}).finally(() => setCargando(false))
+    apiGet<F005Registro[]>(`/f005/registros?desde=${desde}&hasta=${hasta}`).then(setRows).catch(() => {}).finally(() => setCargando(false))
   }
-  useEffect(() => { cargar() }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [desde, hasta])
 
   async function borrar(r: F005Registro) {
     if (!window.confirm('¿Borrar este registro F-005? Esta acción no se puede deshacer.')) return
@@ -114,6 +118,7 @@ export default function RegistrosF005({ onEditar, onBack }: { onEditar?: (id: st
           <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
         </div>
       </div>
+      <RangoFechas desde={desde} hasta={hasta} setDesde={setDesde} setHasta={setHasta} />
       {cargando ? <p className="muted">Cargando…</p> : (
         <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} renderDetail={renderDetail} />
       )}

@@ -21,7 +21,8 @@ export default function PdfExport({ formato }: { formato: string }) {
   const [bajando, setBajando] = useState(false)
   const [error, setError] = useState('')
 
-  const porOp = formato === 'f006' && modo === 'op'
+  const admiteOp = formato === 'f006' || formato === 'f158'  // reporte por OP
+  const porOp = admiteOp && modo === 'op'
 
   async function descargar() {
     setError('')
@@ -58,7 +59,7 @@ export default function PdfExport({ formato }: { formato: string }) {
             <div className="modal-body">
               <h3 style={{ marginTop: 0 }}>Descargar PDF</h3>
 
-              {formato === 'f006' && (
+              {admiteOp && (
                 <div style={{ marginBottom: 12 }}>
                   <p className="muted" style={{ margin: '0 0 6px' }}>¿Cómo quieres el reporte?</p>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

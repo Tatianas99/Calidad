@@ -264,13 +264,18 @@ def _f006(db, desde, hasta, op=None):
 
 
 # ------------------------------- F-158 ------------------------------------- #
-def _f158(db, desde, hasta):
+def _f158(db, desde, hasta, op=None):
     from .routers.turnos import cargar_horarios, turno_de
     horarios = cargar_horarios(db)
-    regs = (db.query(models.F158Recorrido)
-            .options(selectinload(models.F158Recorrido.items), selectinload(models.F158Recorrido.adjuntos))
-            .filter(models.F158Recorrido.fecha_hora >= desde, models.F158Recorrido.fecha_hora <= hasta)
-            .order_by(models.F158Recorrido.fecha_hora).all())
+    q = (db.query(models.F158Recorrido)
+         .options(selectinload(models.F158Recorrido.items), selectinload(models.F158Recorrido.adjuntos)))
+    if op:  # por OP: la OP está en los ítems del recorrido (sin filtrar por fecha)
+        ids = [r[0] for r in db.query(models.F158Item.recorrido_id)
+               .filter(models.F158Item.campo_key == "op", models.F158Item.valor == op).distinct().all()]
+        q = q.filter(models.F158Recorrido.id.in_(ids)) if ids else q.filter(models.F158Recorrido.id == "__none__")
+    else:
+        q = q.filter(models.F158Recorrido.fecha_hora >= desde, models.F158Recorrido.fecha_hora <= hasta)
+    regs = q.order_by(models.F158Recorrido.fecha_hora).all()
     header = ["Fecha", "Hora", "Proceso", "Máquina", "OP", "Referencia", "Responsable", "C", "NC"]
     rows, detalles = [], []
     conteo = {}  # proceso -> [t1, t2, t3]
@@ -289,7 +294,8 @@ def _f158(db, desde, hasta):
         tiene_nc = nc > 0
         tiene_com = bool(r.observaciones and r.observaciones.strip())
         tiene_adj = len(r.adjuntos) > 0
-        if not (tiene_nc or tiene_com or tiene_adj):
+        # Por rango: solo detalla los que tienen novedad/evidencia. Por OP: todos.
+        if not (tiene_nc or tiene_com or tiene_adj) and not op:
             continue
         items = [[it.campo_label, it.valor or "—"] for it in r.items if it.campo_key != "op" and it.tipo != "referencia"]
         tablas = [_mini(["Ítem", "Resultado"], items)] if items else []
@@ -426,8 +432,13 @@ _FORMATOS = {"f005": _f005, "f006": _f006, "f015": _f015, "f158": _f158, "f204":
 
 
 def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: str, db, op=None) -> bytes:
-    # Solo F-006 admite filtro por OP; los demás formatos ignoran `op`.
-    spec = _f006(db, desde, hasta, op) if (formato == "f006") else _FORMATOS[formato](db, desde, hasta)
+    # F-006 y F-158 admiten filtro por OP; los demás formatos ignoran `op`.
+    if formato == "f006":
+        spec = _f006(db, desde, hasta, op)
+    elif formato == "f158":
+        spec = _f158(db, desde, hasta, op)
+    else:
+        spec = _FORMATOS[formato](db, desde, hasta)
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
                             topMargin=13 * mm, bottomMargin=15 * mm, title=f"Reporte {formato.upper()}")

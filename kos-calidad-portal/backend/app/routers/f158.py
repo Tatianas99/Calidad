@@ -46,20 +46,26 @@ def obtener_config(db: Session = Depends(get_db)):
 @router.get("/recorridos", response_model=list[schemas.F158RecorridoOut])
 def listar_recorridos(
     fecha: Optional[date] = None,
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
     proceso: Optional[str] = None,
     mios: bool = False,
     recientes_horas: Optional[int] = None,
     user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Lista recorridos. `mios=true` limita a los del usuario actual (panel lateral);
-    `recientes_horas=N` limita a los registrados en las últimas N horas."""
+    """Lista recorridos. `desde`/`hasta` acotan por fecha; `mios=true` limita a los
+    del usuario actual; `recientes_horas=N` a los de las últimas N horas."""
     q = db.query(models.F158Recorrido).options(
         selectinload(models.F158Recorrido.items),
         selectinload(models.F158Recorrido.adjuntos),
     )
     if fecha:
         q = q.filter(models.F158Recorrido.fecha == fecha)
+    if desde:
+        q = q.filter(models.F158Recorrido.fecha >= desde)
+    if hasta:
+        q = q.filter(models.F158Recorrido.fecha <= hasta)
     if proceso:
         q = q.filter(models.F158Recorrido.proceso == proceso)
     if mios:

@@ -54,6 +54,8 @@ def crear_registro(
 @router.get("/registros", response_model=list[schemas.F005RegistroOut])
 def listar_registros(
     fecha: Optional[date] = None,
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
     mios: bool = False,
     recientes_horas: Optional[int] = None,
     user: models.Usuario = Depends(get_current_user),
@@ -62,6 +64,10 @@ def listar_registros(
     q = db.query(models.F005Registro)
     if fecha:
         q = q.filter(models.F005Registro.fecha == fecha)
+    if desde:
+        q = q.filter(models.F005Registro.fecha >= desde)
+    if hasta:
+        q = q.filter(models.F005Registro.fecha <= hasta)
     if mios:
         q = q.filter(models.F005Registro.responsable_id == user.id)
     if recientes_horas:

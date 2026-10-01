@@ -4,6 +4,7 @@ import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
 import PdfExport from '../components/PdfExport'
+import { RangoFechas, hoyISO, haceDiasISO } from '../components/RangoFechas'
 import type { PuntoMedicion, Persona, F015Medicion } from '../lib/types'
 
 const fechaHora = (iso: string) => new Date(iso).toLocaleString('es-CO', {
@@ -16,11 +17,12 @@ export default function RegistrosF015({ onEditar, onBack }: { onEditar?: (id: st
   const [personas, setPersonas] = useState<Persona[]>([])
   const [cargando, setCargando] = useState(true)
   const admin = getUser()?.rol === 'admin'
+  const [desde, setDesde] = useState(haceDiasISO(30))
+  const [hasta, setHasta] = useState(hoyISO())
 
   const cargar = () => {
     setCargando(true)
-    // Sin ?fecha => todas las mediciones
-    apiGet<F015Medicion[]>('/f015/mediciones')
+    apiGet<F015Medicion[]>(`/f015/mediciones?desde=${desde}&hasta=${hasta}`)
       .then(setRows)
       .catch(() => {})
       .finally(() => setCargando(false))
@@ -29,8 +31,9 @@ export default function RegistrosF015({ onEditar, onBack }: { onEditar?: (id: st
   useEffect(() => {
     apiGet<PuntoMedicion[]>('/catalogos/puntos-medicion').then(setPuntos).catch(() => {})
     apiGet<Persona[]>('/catalogos/personas').then(setPersonas).catch(() => {})
-    cargar()
   }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [desde, hasta])
 
   const puntoName = (id?: number | null) => (id ? puntos.find((p) => p.id === id)?.nombre ?? `#${id}` : '')
   const personaName = (id?: number | null) => (id ? personas.find((p) => p.id === id)?.nombre ?? `#${id}` : '—')
@@ -82,6 +85,7 @@ export default function RegistrosF015({ onEditar, onBack }: { onEditar?: (id: st
           <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
         </div>
       </div>
+      <RangoFechas desde={desde} hasta={hasta} setDesde={setDesde} setHasta={setHasta} />
       {cargando ? <p className="muted">Cargando…</p> : (
         <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} />
       )}

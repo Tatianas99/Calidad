@@ -93,13 +93,20 @@ def borrar_medicion(
 
 
 @router.get("/mediciones", response_model=list[schemas.F015MedicionOut])
-def listar_mediciones(fecha: Optional[date] = None, db: Session = Depends(get_db)):
+def listar_mediciones(
+    fecha: Optional[date] = None,
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
+    db: Session = Depends(get_db),
+):
     q = db.query(models.F015Medicion)
     if fecha:
-        inicio = datetime.combine(fecha, time.min)
-        fin = datetime.combine(fecha, time.max)
         q = q.filter(
-            models.F015Medicion.fecha_hora >= inicio,
-            models.F015Medicion.fecha_hora <= fin,
+            models.F015Medicion.fecha_hora >= datetime.combine(fecha, time.min),
+            models.F015Medicion.fecha_hora <= datetime.combine(fecha, time.max),
         )
+    if desde:
+        q = q.filter(models.F015Medicion.fecha_hora >= datetime.combine(desde, time.min))
+    if hasta:
+        q = q.filter(models.F015Medicion.fecha_hora <= datetime.combine(hasta, time.max))
     return q.order_by(models.F015Medicion.fecha_hora.desc()).all()

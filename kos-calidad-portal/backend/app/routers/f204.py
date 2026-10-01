@@ -71,6 +71,8 @@ def crear_registro(
 @router.get("/registros", response_model=list[schemas.F204RegistroOut])
 def listar_registros(
     fecha: Optional[date] = None,
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
     turno: Optional[int] = None,
     mios: bool = False,
     recientes_horas: Optional[int] = None,
@@ -80,6 +82,10 @@ def listar_registros(
     q = db.query(models.F204Registro)
     if fecha:
         q = q.filter(models.F204Registro.fecha == fecha)
+    if desde:
+        q = q.filter(models.F204Registro.fecha >= desde)
+    if hasta:
+        q = q.filter(models.F204Registro.fecha <= hasta)
     if turno:
         q = q.filter(models.F204Registro.turno == turno)
     if mios:

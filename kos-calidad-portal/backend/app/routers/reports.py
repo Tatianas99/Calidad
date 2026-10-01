@@ -38,13 +38,22 @@ def reporte_pdf(
         raise HTTPException(status_code=404, detail="Formato no válido")
 
     if op and op.strip():
-        if formato != "f006":
-            raise HTTPException(status_code=400, detail="El reporte por OP solo aplica a F-006")
         op = op.strip()
-        regs = db.query(models.F006Registro).filter(models.F006Registro.orden_produccion == op).all()
-        if not regs:
-            raise HTTPException(status_code=404, detail=f"No hay registros de la OP {op}")
-        fechas = [r.creado_en for r in regs]
+        if formato == "f006":
+            regs = db.query(models.F006Registro).filter(models.F006Registro.orden_produccion == op).all()
+            if not regs:
+                raise HTTPException(status_code=404, detail=f"No hay registros de la OP {op}")
+            fechas = [r.creado_en for r in regs]
+        elif formato == "f158":
+            # En F-158 la OP vive en los ítems del recorrido (campo_key='op').
+            ids = [r[0] for r in db.query(models.F158Item.recorrido_id)
+                   .filter(models.F158Item.campo_key == "op", models.F158Item.valor == op).distinct().all()]
+            if not ids:
+                raise HTTPException(status_code=404, detail=f"No hay recorridos de la OP {op}")
+            fechas = [r[0] for r in db.query(models.F158Recorrido.fecha_hora)
+                      .filter(models.F158Recorrido.id.in_(ids)).all()]
+        else:
+            raise HTTPException(status_code=400, detail="El reporte por OP solo aplica a F-006 y F-158")
         desde, hasta = min(fechas), max(fechas)
         pdf = build_report_pdf(formato, desde, hasta, user.nombre, db, op=op)
         nombre = f"reporte_{formato}_OP-{op}.pdf".replace(" ", "_")

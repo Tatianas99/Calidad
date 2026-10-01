@@ -4,6 +4,7 @@ import { getUser } from '../lib/auth'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
 import PdfExport from '../components/PdfExport'
+import { RangoFechas, hoyISO, haceDiasISO } from '../components/RangoFechas'
 import type { Referencia, Maquina, Persona, Opciones, F006Registro, Option } from '../lib/types'
 
 const label = (opts: Option[], v: string) => opts.find((o) => o.value === v)?.label ?? v
@@ -19,11 +20,13 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
   const [personas, setPersonas] = useState<Persona[]>([])
   const [opts, setOpts] = useState<Opciones | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [desde, setDesde] = useState(haceDiasISO(30))
+  const [hasta, setHasta] = useState(hoyISO())
   const admin = getUser()?.rol === 'admin'
 
   const cargar = () => {
     setCargando(true)
-    apiGet<F006Registro[]>('/f006/registros')
+    apiGet<F006Registro[]>(`/f006/registros?desde=${desde}&hasta=${hasta}`)
       .then((d) => setRows(d))
       .catch(() => {})
       .finally(() => setCargando(false))
@@ -34,8 +37,9 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
     apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
     apiGet<Persona[]>('/catalogos/personas').then(setPersonas).catch(() => {})
     apiGet<Opciones>('/catalogos/opciones').then(setOpts).catch(() => {})
-    cargar()
   }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [desde, hasta])
 
   async function borrar(r: F006Registro) {
     if (!window.confirm('¿Borrar este registro F-006? Esta acción no se puede deshacer.')) return
@@ -178,6 +182,7 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
           <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
         </div>
       </div>
+      <RangoFechas desde={desde} hasta={hasta} setDesde={setDesde} setHasta={setHasta} />
       {cargando ? <p className="muted">Cargando…</p> : (
         <FilterTable columns={columns} rows={rows} getKey={(r) => r.id} renderDetail={renderDetail} />
       )}

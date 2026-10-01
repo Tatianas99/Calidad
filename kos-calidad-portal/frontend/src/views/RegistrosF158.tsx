@@ -5,6 +5,7 @@ import { matchKeywords } from '../lib/fuzzy'
 import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
 import PdfExport from '../components/PdfExport'
+import { RangoFechas, hoyISO, haceDiasISO } from '../components/RangoFechas'
 import type { F158Config, F158Recorrido, F158Item } from '../lib/types'
 
 const fechaHora = (iso: string) => {
@@ -32,10 +33,12 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
   const [cargando, setCargando] = useState(true)
   const [busqRollo, setBusqRollo] = useState('')
   const admin = getUser()?.rol === 'admin'
+  const [desde, setDesde] = useState(haceDiasISO(30))
+  const [hasta, setHasta] = useState(hoyISO())
 
   const cargar = () => {
     setCargando(true)
-    apiGet<F158Recorrido[]>('/f158/recorridos')
+    apiGet<F158Recorrido[]>(`/f158/recorridos?desde=${desde}&hasta=${hasta}`)
       .then(setRows)
       .catch(() => {})
       .finally(() => setCargando(false))
@@ -43,8 +46,9 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
 
   useEffect(() => {
     apiGet<F158Config>('/f158/config').then(setConfig).catch(() => {})
-    cargar()
   }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [desde, hasta])
 
   const procLabel = (key: string) => config?.procesos.find((p) => p.key === key)?.label ?? key
 
@@ -139,6 +143,7 @@ export default function RegistrosF158({ onEditar, onBack }: { onEditar?: (id: st
           <button className="btn btn-ghost" style={{ minHeight: 40 }} onClick={cargar}>↻ Actualizar</button>
         </div>
       </div>
+      <RangoFechas desde={desde} hasta={hasta} setDesde={setDesde} setHasta={setHasta} />
       <div style={{ margin: '4px 0 12px' }}>
         <input
           className="filt-search"
