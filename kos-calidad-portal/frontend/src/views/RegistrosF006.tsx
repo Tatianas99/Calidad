@@ -5,7 +5,7 @@ import FilterTable, { type Col } from '../components/FilterTable'
 import RowActions from '../components/RowActions'
 import PdfExport from '../components/PdfExport'
 import { RangoFechas, hoyISO, haceDiasISO } from '../components/RangoFechas'
-import type { Referencia, Maquina, Persona, Opciones, F006Registro, Option } from '../lib/types'
+import type { Referencia, Maquina, Persona, Opciones, F006Registro, F006RegistroResumen, Option } from '../lib/types'
 
 const label = (opts: Option[], v: string) => opts.find((o) => o.value === v)?.label ?? v
 const hhmm = (iso?: string | null) =>
@@ -13,88 +13,27 @@ const hhmm = (iso?: string | null) =>
 const resPill = (v?: string | null) =>
   'res-pill ' + (v === 'C' ? 'r-c' : v === 'NC' ? 'r-nc' : 'r-na')
 
-export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: string) => void; onBack?: () => void }) {
-  const [rows, setRows] = useState<F006Registro[]>([])
-  const [refs, setRefs] = useState<Referencia[]>([])
-  const [maqs, setMaqs] = useState<Maquina[]>([])
-  const [personas, setPersonas] = useState<Persona[]>([])
-  const [opts, setOpts] = useState<Opciones | null>(null)
-  const [cargando, setCargando] = useState(true)
-  const [desde, setDesde] = useState(haceDiasISO(30))
-  const [hasta, setHasta] = useState(hoyISO())
-  const admin = getUser()?.rol === 'admin'
-
-  const cargar = () => {
-    setCargando(true)
-    apiGet<F006Registro[]>(`/f006/registros?desde=${desde}&hasta=${hasta}`)
-      .then((d) => setRows(d))
-      .catch(() => {})
-      .finally(() => setCargando(false))
-  }
-
+// Detalle de un registro: se pide al abrir la fila (la lista es liviana y no
+// trae filtraciones ni embalaje, para que cargue rápido).
+function DetalleF006({ id, opts, personaName }: {
+  id: string
+  opts: Opciones | null
+  personaName: (id?: number | null) => string
+}) {
+  const [r, setR] = useState<F006Registro | null>(null)
+  const [error, setError] = useState(false)
   useEffect(() => {
-    apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
-    apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
-    apiGet<Persona[]>('/catalogos/personas').then(setPersonas).catch(() => {})
-    apiGet<Opciones>('/catalogos/opciones').then(setOpts).catch(() => {})
-  }, [])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { cargar() }, [desde, hasta])
+    let vivo = true
+    apiGet<F006Registro>(`/f006/registros/${id}`)
+      .then((d) => { if (vivo) setR(d) })
+      .catch(() => { if (vivo) setError(true) })
+    return () => { vivo = false }
+  }, [id])
 
-  async function borrar(r: F006Registro) {
-    if (!window.confirm('¿Borrar este registro F-006? Esta acción no se puede deshacer.')) return
-    try {
-      await apiSend('DELETE', `/f006/registros/${r.id}`)
-      setRows((rs) => rs.filter((x) => x.id !== r.id))
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'No se pudo borrar')
-    }
-  }
+  if (error) return <p className="tag-bad">No se pudo cargar el detalle.</p>
+  if (!r) return <p className="muted">Cargando detalle…</p>
 
-  // La referencia ahora viene de la OP como texto; la FK vieja es respaldo.
-  const refName = (reg: F006Registro) => {
-    if (reg.referencia_texto) return reg.referencia_texto
-    if (!reg.referencia_id) return ''
-    const r = refs.find((x) => x.id === reg.referencia_id)
-    return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : ''
-  }
-  const maqName = (id?: number | null) => (id ? maqs.find((m) => m.id === id)?.nombre ?? `#${id}` : '')
-  const personaName = (id?: number | null) => (id ? personas.find((p) => p.id === id)?.nombre ?? `#${id}` : '—')
-
-  const sum = (r: F006Registro, key: 'cantidad_muestra' | 'cantidad_cumple' | 'cantidad_nocumple') =>
-    r.filtraciones.reduce((a, f) => a + ((f[key] as number | null | undefined) ?? 0), 0)
-
-  const columns: Col<F006Registro>[] = useMemo(() => [
-    { key: 'fecha', label: 'Fecha', value: (r) => r.fecha },
-    { key: 'turno', label: 'Turno', value: (r) => `T${r.turno}` },
-    { key: 'op', label: 'OP', value: (r) => r.orden_produccion ?? '' },
-    { key: 'maquina', label: 'Máquina', value: (r) => r.maquina_texto || maqName(r.maquina_id) },
-    { key: 'referencia', label: 'Referencia', value: (r) => refName(r) },
-    { key: 'marca', label: 'Marca', value: (r) => r.marca ?? '' },
-    { key: 'auxiliar', label: 'Auxiliar', value: (r) => r.auxiliar_nombre || personaName(r.auxiliar_id) },
-    { key: 'muestra', label: 'Muestra', value: (r) => String(sum(r, 'cantidad_muestra')) },
-    { key: 'cumple', label: 'Cumple', value: (r) => String(sum(r, 'cantidad_cumple')) },
-    { key: 'nocumple', label: 'No cumple', value: (r) => String(sum(r, 'cantidad_nocumple')) },
-    {
-      key: 'pct_nc', label: '% de NC',
-      value: (r) => {
-        const m = sum(r, 'cantidad_muestra')
-        const nc = sum(r, 'cantidad_nocumple')
-        return m > 0 ? `${(nc / m * 100).toFixed(1)}%` : '—'
-      },
-    },
-    ...(admin ? [{
-      key: 'acciones', label: '', noFilter: true, value: () => '',
-      render: (r: F006Registro) => (
-        <RowActions
-          onEdit={onEditar ? () => onEditar(r.id) : undefined}
-          onDelete={() => borrar(r)}
-        />
-      ),
-    } as Col<F006Registro>] : []),
-  ], [refs, maqs, personas, onEditar, admin])
-
-  const renderDetail = (r: F006Registro) => (
+  return (
     <div className="detalle">
       <div style={{ gridColumn: '1 / -1' }} className="muted">
         Operario: <b>{r.operario_nombre || personaName(r.operario_id)}</b> · Empacador: <b>{r.empacador_nombre || personaName(r.empacador_id)}</b> · Registrado: {hhmm(r.creado_en)}
@@ -169,6 +108,85 @@ export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: st
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RegistrosF006({ onEditar, onBack }: { onEditar?: (id: string) => void; onBack?: () => void }) {
+  const [rows, setRows] = useState<F006RegistroResumen[]>([])
+  const [refs, setRefs] = useState<Referencia[]>([])
+  const [maqs, setMaqs] = useState<Maquina[]>([])
+  const [personas, setPersonas] = useState<Persona[]>([])
+  const [opts, setOpts] = useState<Opciones | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [desde, setDesde] = useState(haceDiasISO(30))
+  const [hasta, setHasta] = useState(hoyISO())
+  const admin = getUser()?.rol === 'admin'
+
+  const cargar = () => {
+    setCargando(true)
+    apiGet<F006RegistroResumen[]>(`/f006/registros/resumen?desde=${desde}&hasta=${hasta}`)
+      .then((d) => setRows(d))
+      .catch(() => {})
+      .finally(() => setCargando(false))
+  }
+
+  useEffect(() => {
+    apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
+    apiGet<Maquina[]>('/catalogos/maquinas').then(setMaqs).catch(() => {})
+    apiGet<Persona[]>('/catalogos/personas').then(setPersonas).catch(() => {})
+    apiGet<Opciones>('/catalogos/opciones').then(setOpts).catch(() => {})
+  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [desde, hasta])
+
+  async function borrar(r: F006RegistroResumen) {
+    if (!window.confirm('¿Borrar este registro F-006? Esta acción no se puede deshacer.')) return
+    try {
+      await apiSend('DELETE', `/f006/registros/${r.id}`)
+      setRows((rs) => rs.filter((x) => x.id !== r.id))
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'No se pudo borrar')
+    }
+  }
+
+  // La referencia ahora viene de la OP como texto; la FK vieja es respaldo.
+  const refName = (reg: F006RegistroResumen) => {
+    if (reg.referencia_texto) return reg.referencia_texto
+    if (!reg.referencia_id) return ''
+    const r = refs.find((x) => x.id === reg.referencia_id)
+    return r ? (r.descripcion ? `${r.codigo} ${r.descripcion}` : r.codigo) : ''
+  }
+  const maqName = (id?: number | null) => (id ? maqs.find((m) => m.id === id)?.nombre ?? `#${id}` : '')
+  const personaName = (id?: number | null) => (id ? personas.find((p) => p.id === id)?.nombre ?? `#${id}` : '—')
+
+  const columns: Col<F006RegistroResumen>[] = useMemo(() => [
+    { key: 'fecha', label: 'Fecha', value: (r) => r.fecha },
+    { key: 'turno', label: 'Turno', value: (r) => `T${r.turno}` },
+    { key: 'op', label: 'OP', value: (r) => r.orden_produccion ?? '' },
+    { key: 'maquina', label: 'Máquina', value: (r) => r.maquina_texto || maqName(r.maquina_id) },
+    { key: 'referencia', label: 'Referencia', value: (r) => refName(r) },
+    { key: 'marca', label: 'Marca', value: (r) => r.marca ?? '' },
+    { key: 'auxiliar', label: 'Auxiliar', value: (r) => r.auxiliar_nombre || personaName(r.auxiliar_id) },
+    { key: 'muestra', label: 'Muestra', value: (r) => String(r.suma_muestra) },
+    { key: 'cumple', label: 'Cumple', value: (r) => String(r.suma_cumple) },
+    { key: 'nocumple', label: 'No cumple', value: (r) => String(r.suma_nocumple) },
+    {
+      key: 'pct_nc', label: '% de NC',
+      value: (r) => (r.suma_muestra > 0 ? `${(r.suma_nocumple / r.suma_muestra * 100).toFixed(1)}%` : '—'),
+    },
+    ...(admin ? [{
+      key: 'acciones', label: '', noFilter: true, value: () => '',
+      render: (r: F006RegistroResumen) => (
+        <RowActions
+          onEdit={onEditar ? () => onEditar(r.id) : undefined}
+          onDelete={() => borrar(r)}
+        />
+      ),
+    } as Col<F006RegistroResumen>] : []),
+  ], [refs, maqs, personas, onEditar, admin])
+
+  const renderDetail = (r: F006RegistroResumen) => (
+    <DetalleF006 id={r.id} opts={opts} personaName={personaName} />
   )
 
   return (

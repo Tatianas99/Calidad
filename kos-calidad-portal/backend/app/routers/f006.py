@@ -3,6 +3,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from sqlalchemy.orm import selectinload
@@ -84,6 +85,42 @@ def listar_registros(
     if turno:
         q = q.filter(models.F006Registro.turno == turno)
     return q.order_by(models.F006Registro.creado_en.desc()).all()
+
+
+@router.get("/registros/resumen", response_model=list[schemas.F006RegistroResumen])
+def listar_resumen(
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
+    turno: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Lista liviana para "Ver registros": trae una fila por registro con las
+    sumas de las pruebas (muestra/cumple/no cumple) calculadas en SQL, sin
+    traer las filtraciones ni el embalaje. Así la pantalla carga rápido aunque
+    haya miles de registros; el detalle se pide al abrir la fila."""
+    R = models.F006Registro
+    Fi = models.F006Filtracion
+    muestra = func.coalesce(func.sum(Fi.cantidad_muestra), 0).label("suma_muestra")
+    cumple = func.coalesce(func.sum(Fi.cantidad_cumple), 0).label("suma_cumple")
+    nocumple = func.coalesce(func.sum(Fi.cantidad_nocumple), 0).label("suma_nocumple")
+    q = db.query(
+        R.id, R.fecha, R.turno, R.orden_produccion,
+        R.maquina_id, R.maquina_texto, R.referencia_id, R.referencia_texto,
+        R.marca, R.auxiliar_id, R.auxiliar_nombre, R.creado_en,
+        muestra, cumple, nocumple,
+    ).outerjoin(Fi, Fi.registro_id == R.id)
+    if desde:
+        q = q.filter(R.fecha >= desde)
+    if hasta:
+        q = q.filter(R.fecha <= hasta)
+    if turno:
+        q = q.filter(R.turno == turno)
+    q = q.group_by(
+        R.id, R.fecha, R.turno, R.orden_produccion,
+        R.maquina_id, R.maquina_texto, R.referencia_id, R.referencia_texto,
+        R.marca, R.auxiliar_id, R.auxiliar_nombre, R.creado_en,
+    ).order_by(R.creado_en.desc())
+    return [schemas.F006RegistroResumen(**row._mapping) for row in q.all()]
 
 
 @router.get("/registros/{registro_id}", response_model=schemas.F006RegistroOut)

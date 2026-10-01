@@ -12,6 +12,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
@@ -74,6 +75,45 @@ def listar_recorridos(
         q = q.filter(models.F158Recorrido.creado_en >= now_co() - timedelta(hours=recientes_horas))
     regs = q.order_by(models.F158Recorrido.creado_en.desc()).all()
     return [_out(r) for r in regs]
+
+
+@router.get("/recorridos/resumen", response_model=list[schemas.F158RecorridoResumen])
+def listar_resumen(
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
+    proceso: Optional[str] = None,
+    user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lista liviana para "Ver registros": trae una fila por recorrido con OP,
+    rollo, referencia y el conteo de C/NC calculados en SQL, sin traer los ítems
+    ni los adjuntos. Así la pantalla carga rápido aunque haya miles de
+    recorridos; el checklist y las fotos se piden al abrir la fila."""
+    R = models.F158Recorrido
+    I = models.F158Item
+    op = func.max(case((I.campo_key == "op", I.valor))).label("op")
+    rollo = func.max(case((I.campo_key.in_(["lote_rollo", "numero_rollo"]), I.valor))).label("rollo")
+    referencia = func.max(case((I.tipo == "referencia", I.valor))).label("referencia")
+    c_count = func.coalesce(
+        func.sum(case(((I.tipo == "cncna") & (I.valor == "C"), 1), else_=0)), 0
+    ).label("c_count")
+    nc_count = func.coalesce(
+        func.sum(case(((I.tipo == "cncna") & (I.valor == "NC"), 1), else_=0)), 0
+    ).label("nc_count")
+    q = db.query(
+        R.id, R.fecha_hora, R.proceso, R.maquina, R.responsable_nombre, R.creado_en,
+        op, rollo, referencia, c_count, nc_count,
+    ).outerjoin(I, I.recorrido_id == R.id)
+    if desde:
+        q = q.filter(R.fecha >= desde)
+    if hasta:
+        q = q.filter(R.fecha <= hasta)
+    if proceso:
+        q = q.filter(R.proceso == proceso)
+    q = q.group_by(
+        R.id, R.fecha_hora, R.proceso, R.maquina, R.responsable_nombre, R.creado_en,
+    ).order_by(R.creado_en.desc())
+    return [schemas.F158RecorridoResumen(**row._mapping) for row in q.all()]
 
 
 @router.get("/recorridos/{recorrido_id}", response_model=schemas.F158RecorridoOut)

@@ -190,6 +190,26 @@ class F006RegistroOut(Mediciones):
     model_config = ConfigDict(from_attributes=True)
 
 
+class F006RegistroResumen(BaseModel):
+    """Fila liviana para la lista "Ver registros": las sumas de las pruebas de
+    filtración se calculan en SQL (no se traen las filtraciones). El detalle
+    completo se pide aparte con GET /f006/registros/{id} al abrir la fila."""
+    id: str
+    fecha: date
+    turno: int
+    orden_produccion: Optional[str] = None
+    maquina_id: Optional[int] = None
+    maquina_texto: Optional[str] = None
+    referencia_id: Optional[int] = None
+    referencia_texto: Optional[str] = None
+    marca: Optional[str] = None
+    auxiliar_id: Optional[int] = None
+    auxiliar_nombre: Optional[str] = None
+    suma_muestra: int = 0
+    suma_cumple: int = 0
+    suma_nocumple: int = 0
+
+
 # --------------------------------------------------------------------------- #
 # F-015 — Medición de cloro y PH del agua
 # --------------------------------------------------------------------------- #
@@ -273,6 +293,23 @@ class F158RecorridoOut(BaseModel):
     items: List[F158ItemOut] = []
     adjuntos: List[F158AdjuntoOut] = []
     model_config = ConfigDict(from_attributes=True)
+
+
+class F158RecorridoResumen(BaseModel):
+    """Fila liviana para la lista "Ver registros": OP, rollo, referencia y el
+    conteo de C/NC se calculan en SQL (no se traen los ítems ni los adjuntos).
+    El checklist y las fotos se piden aparte con GET /f158/recorridos/{id} al
+    abrir la fila."""
+    id: str
+    fecha_hora: datetime
+    proceso: str
+    maquina: Optional[str] = None
+    responsable_nombre: Optional[str] = None
+    op: Optional[str] = None
+    rollo: Optional[str] = None
+    referencia: Optional[str] = None
+    c_count: int = 0
+    nc_count: int = 0
 
 
 # --------------------------------------------------------------------------- #

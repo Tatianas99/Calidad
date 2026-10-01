@@ -63,6 +63,25 @@ export type F006Registro = {
   filtraciones: Filtracion[]
 }
 
+// Fila liviana de "Ver registros" F-006: las sumas vienen calculadas del
+// servidor; el detalle (filtraciones, embalaje) se pide al abrir la fila.
+export type F006RegistroResumen = {
+  id: string
+  fecha: string
+  turno: number
+  orden_produccion?: string | null
+  maquina_id?: number | null
+  maquina_texto?: string | null
+  referencia_id?: number | null
+  referencia_texto?: string | null
+  marca?: string | null
+  auxiliar_id?: number | null
+  auxiliar_nombre?: string | null
+  suma_muestra: number
+  suma_cumple: number
+  suma_nocumple: number
+}
+
 export type F015Medicion = {
   id: string
   fecha_hora: string
@@ -166,4 +185,20 @@ export type F158Recorrido = {
   actualizado_en?: string | null
   items: F158Item[]
   adjuntos: F158Adjunto[]
+}
+
+// Fila liviana de "Ver registros" F-158: OP, rollo, referencia y el conteo de
+// C/NC vienen calculados del servidor; el checklist y las fotos se piden al
+// abrir la fila.
+export type F158RecorridoResumen = {
+  id: string
+  fecha_hora: string
+  proceso: string
+  maquina?: string | null
+  responsable_nombre?: string | null
+  op?: string | null
+  rollo?: string | null
+  referencia?: string | null
+  c_count: number
+  nc_count: number
 }
