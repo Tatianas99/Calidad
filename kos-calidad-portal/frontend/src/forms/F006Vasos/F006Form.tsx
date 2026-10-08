@@ -752,12 +752,16 @@ function FiltracionCard({
 
   const prueba = opts ? labelOf(opts.tipos_prueba_f006, f.tipo_prueba) : f.tipo_prueba
   const material = opts ? labelOf(opts.tipos_material_f006, f.tipo_material) : f.tipo_material
-  // Las preguntas de la tapa se omiten solo cuando el producto es "porta papa"
-  // (no tiene tapa) Y la prueba es de rasgado. En cualquier otro producto, la
-  // prueba de rasgado sí pide la información de la tapa.
+  // Las preguntas de la tapa se omiten solo cuando el producto NO tiene tapa
+  // (porta papa, caja china, vaso caja) Y la prueba es de rasgado. En cualquier
+  // otro producto, la prueba de rasgado sí pide la información de la tapa.
   const esRasgado = f.tipo_prueba === 'rasgado'
-  const esPortaPapa = /porta[\s-]*papas?/.test((productoLabel || '').toLowerCase())
-  const ocultarTapa = esRasgado && esPortaPapa
+  const prodTxt = (productoLabel || '').toLowerCase()
+  const esSinTapa =
+    /porta[\s-]*papas?/.test(prodTxt) ||  // "porta papa(s)" o "portapapa(s)"
+    /caja\s*china/.test(prodTxt) ||       // "caja china"
+    /vaso\s*caja/.test(prodTxt)           // "vaso caja"
+  const ocultarTapa = esRasgado && esSinTapa
 
   // Edición de un resultado ya registrado (antes de finalizar el producto).
   const iniciarEdicion = () => {
@@ -854,8 +858,9 @@ function FiltracionCard({
           {excede && (
             <p className="tag-bad">La cantidad que cumple no puede ser mayor a la muestra ({muestraNum}).</p>
           )}
-          {/* Rasgado en producto "porta papa" (sin tapa): no lleva preguntas de tapa,
-              solo cumple y observaciones. En otros productos, rasgado sí las pide. */}
+          {/* Rasgado en producto sin tapa (porta papa, caja china, vaso caja): no
+              lleva preguntas de tapa, solo cumple y observaciones. En otros
+              productos, rasgado sí las pide. */}
           {!ocultarTapa && (
             <>
               <div className="check-row">
