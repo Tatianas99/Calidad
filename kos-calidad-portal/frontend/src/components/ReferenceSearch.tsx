@@ -9,10 +9,16 @@ export default function ReferenceSearch({
   referencias,
   value,
   onChange,
+  freeText,
+  onFreeText,
 }: {
   referencias: Referencia[]
   value?: number
   onChange: (id: number) => void
+  // Texto libre: permite escribir una referencia que NO está en la lista y
+  // dejarla válida. Si no se pasan, el buscador funciona solo con la lista.
+  freeText?: string
+  onFreeText?: (text: string) => void
 }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -23,25 +29,51 @@ export default function ReferenceSearch({
     [query, referencias],
   )
 
+  const q = query.trim()
+  const permiteLibre = !!onFreeText && q.length > 0
+  const usarLibre = () => {
+    if (!onFreeText || !q) return
+    onFreeText(q)
+    setOpen(false)
+    setQuery('')
+  }
+
   return (
     <div className="combo">
       <input
         type="text"
-        placeholder="Buscar referencia (ej: vas 7 lo)"
-        value={open ? query : selected ? etiqueta(selected) : query}
+        placeholder="Buscar o escribir referencia (ej: vas 7 lo)"
+        value={open ? query : selected ? etiqueta(selected) : (freeText ?? '')}
         onFocus={() => {
           setOpen(true)
           setQuery('')
         }}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+        onBlur={() => window.setTimeout(() => {
+          // Si dejaron texto escrito que no eligieron de la lista, se acepta tal cual.
+          if (query.trim()) usarLibre()
+          setOpen(false)
+        }, 150)}
         onChange={(e) => {
           setQuery(e.target.value)
           setOpen(true)
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && permiteLibre) { e.preventDefault(); usarLibre() }
+        }}
       />
       {open && (
         <div className="combo-list">
-          {matches.length === 0 && <div className="combo-empty">Sin coincidencias</div>}
+          {permiteLibre && (
+            <button
+              type="button"
+              className="combo-item combo-libre"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={usarLibre}
+            >
+              ✎ Usar “{q}” (escribir referencia)
+            </button>
+          )}
+          {matches.length === 0 && !permiteLibre && <div className="combo-empty">Sin coincidencias</div>}
           {matches.map((r) => (
             <button
               type="button"

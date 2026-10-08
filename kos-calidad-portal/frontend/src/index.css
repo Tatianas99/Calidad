@@ -301,6 +301,7 @@ textarea { min-height: 70px; resize: vertical; }
 }
 .combo-item:last-child { border-bottom: none; }
 .combo-item:hover, .combo-item.sel { background: var(--surface-2); }
+.combo-item.combo-libre { color: var(--accent, #2563eb); font-weight: 600; }
 .combo-empty { padding: 12px 14px; color: var(--muted); }
 
 .tag-warn { color: var(--warn); font-weight: 700; }

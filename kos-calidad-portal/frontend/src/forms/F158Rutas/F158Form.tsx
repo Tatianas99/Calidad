@@ -510,8 +510,13 @@ function EntradaDetalle({
             marca={entrada.marcas[c.key] ?? ''}
             onVal={(v) => setVal(c.key, v)}
             onOtro={(v) => setOtro(c.key, v)}
-            onRefId={(id) => setRefId(c.key, id)}
-            onProdText={(v) => setProdText(c.key, v)}
+            // Elegir de la lista fija la FK y borra cualquier texto libre…
+            onRefId={(id) => upd({ refIds: { ...entrada.refIds, [c.key]: id }, prodTextos: { ...entrada.prodTextos, [c.key]: '' } })}
+            // …y escribir texto libre guarda el texto y quita la FK (son excluyentes).
+            onProdText={(v) => {
+              const refIds = { ...entrada.refIds }; delete refIds[c.key]
+              upd({ prodTextos: { ...entrada.prodTextos, [c.key]: v }, refIds })
+            }}
             onMarca={(v) => setMarca(c.key, v)}
             onOpResolve={onOpResolve}
           />
@@ -594,14 +599,17 @@ function CampoField({
   onOpResolve: (o: OP) => void
 }) {
   if (campo.tipo === 'referencia') {
-    // Si la OP ya trajo el producto, se muestra como texto (no hay que buscar).
-    const auto = !!prodTexto.trim()
+    // Si la OP trajo el producto, se muestra como texto (no hay que buscar).
+    // En el llenado manual se usa el buscador, que además permite escribir una
+    // referencia que no esté en la lista (texto libre) y dejarla válida.
+    const opUsada = !!(vals['op'] || '').trim()
+    const auto = opUsada && !!prodTexto.trim()
     return (
       <div className="row" style={{ marginBottom: 8 }}>
         <Field label={campo.label}>
           {auto
             ? <input value={prodTexto} onChange={(e) => onProdText(e.target.value)} placeholder="Se autollena al elegir la OP" />
-            : <ReferenceSearch referencias={refs} value={refId} onChange={onRefId} />}
+            : <ReferenceSearch referencias={refs} value={refId} onChange={onRefId} freeText={prodTexto} onFreeText={onProdText} />}
         </Field>
         <Field label="Marca">
           <input value={marca} onChange={(e) => onMarca(e.target.value)} />
