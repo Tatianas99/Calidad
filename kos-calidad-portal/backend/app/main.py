@@ -17,7 +17,7 @@ from .personal import sync_personas
 from .referencias_sync import sync_referencias
 from .maquinas_sync import sync_maquinas
 from .seed import seed_admin
-from .routers import catalogos, catalogo_op, f005, f006, f015, f158, f204, reports, auth as auth_router, usuarios, proveedores, puntos, dashboard, turnos, borradores
+from .routers import catalogos, catalogo_op, f005, f006, f015, f158, f204, reports, alertas, auth as auth_router, usuarios, proveedores, puntos, dashboard, turnos, borradores
 
 log = logging.getLogger("uvicorn.error")
 
@@ -98,6 +98,7 @@ app.include_router(usuarios.router)  # ya exige permiso gestionar_usuarios inter
 app.include_router(proveedores.router)  # idem (configuración, solo admin)
 app.include_router(puntos.router)  # idem
 app.include_router(turnos.router)  # idem (horarios de turnos)
+app.include_router(alertas.router)  # solo admin (lo valida internamente)
 
 # Build del frontend (frontend/dist copiado aquí en el pipeline de despliegue).
 # Se monta al final para que las rutas de la API definidas arriba tengan prioridad.

@@ -335,3 +335,33 @@ class BorradorTurno(Base):
     clave: Mapped[str] = mapped_column(String(60), primary_key=True)
     contenido: Mapped[str] = mapped_column(Text, default="")           # estado en JSON
     actualizado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co, onupdate=now_co)
+
+
+class AlertaCalidad(Base):
+    """Alerta de Calidad: comunicado (imagen) de un reclamo de cliente.
+
+    Solo admin. Lleva el consecutivo de las alertas que antes se hacían a mano
+    (la 014 fue la última), así que `numero` es único y editable. Los defectos y
+    las acciones se guardan como JSON: son listas cortas (máx. 3) que solo se
+    leen completas para dibujar la imagen.
+    """
+    __tablename__ = "alerta_calidad"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    numero: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
+    producto: Mapped[str] = mapped_column(String(200), nullable=False)
+    codigo: Mapped[Optional[str]] = mapped_column(String(60))
+    titulo: Mapped[str] = mapped_column(String(200), nullable=False)      # defecto principal
+    etiqueta: Mapped[str] = mapped_column(String(20), default="NUEVO")    # NUEVO | REINCIDENTE
+    reporte: Mapped[str] = mapped_column(String(1000), default="")        # lo que reporta el cliente
+    area: Mapped[Optional[str]] = mapped_column(String(120))
+    impacto: Mapped[Optional[str]] = mapped_column(String(500))
+    defectos: Mapped[str] = mapped_column(String(4000), default="[]")     # [{titulo, detalle, estado}]
+    acciones: Mapped[str] = mapped_column(String(2000), default="[]")     # [str]
+    # Trazabilidad interna: no se imprime en la imagen.
+    cliente: Mapped[Optional[str]] = mapped_column(String(160))
+    op_lote: Mapped[Optional[str]] = mapped_column(String(80))
+    foto_ruta: Mapped[Optional[str]] = mapped_column(String(300))
+    creado_por: Mapped[Optional[str]] = mapped_column(String(120))
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+    actualizado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co, onupdate=now_co)

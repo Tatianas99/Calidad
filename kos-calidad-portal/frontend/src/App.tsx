@@ -16,9 +16,10 @@ import RegistrosF005 from './views/RegistrosF005'
 import Configuracion from './views/Configuracion'
 import Dashboard from './views/Dashboard'
 import FichasTecnicas from './views/FichasTecnicas'
+import AlertasCalidad from './views/alertas/AlertasCalidad'
 import { CupsIcon, WaterTestIcon, BadgeIcon, TrashIcon, RollIcon } from './components/FormIcons'
 
-type View = 'home' | 'dashboard' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config' | 'fichas'
+type View = 'home' | 'dashboard' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config' | 'fichas' | 'alertas'
 
 export default function App() {
   const [user, setUser] = useState<Usuario | null>(getUser())
@@ -88,7 +89,8 @@ export default function App() {
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
       {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204'].includes(view)} onClick={() => irA('reportes')} />}
 
-      {(hasPermiso('gestionar_usuarios') || hasPermiso('gestionar_catalogos')) && <div className="nav-sec">Administración</div>}
+      {(hasPermiso('gestionar_usuarios') || hasPermiso('gestionar_catalogos') || user.rol === 'admin') && <div className="nav-sec">Administración</div>}
+      {user.rol === 'admin' && <NavItem label="⚠️ Alertas de Calidad" active={view === 'alertas'} onClick={() => irA('alertas')} />}
       {(hasPermiso('gestionar_usuarios') || hasPermiso('gestionar_catalogos')) && <NavItem label="Configuraciones" active={view === 'config'} onClick={() => irA('config')} />}
 
       <div className="nav-foot">
@@ -123,6 +125,7 @@ export default function App() {
           {view === 'reg204' && <RegistrosF204 onBack={() => setView('reportes')} onEditar={(id) => { setF204Edit(id); setView('f204') }} />}
           {view === 'config' && <Configuracion />}
           {view === 'fichas' && <FichasTecnicas />}
+          {view === 'alertas' && user.rol === 'admin' && <AlertasCalidad />}
         </main>
       </div>
     </div>
@@ -200,6 +203,12 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
           <button className="card tint blue-1" onClick={() => onOpen('f204')}>
             <TrashIcon className="card-icon" />
             <div className="code">F-204</div><h2>Clase B y desperdicio</h2>
+          </button>
+        )}
+        {getUser()?.rol === 'admin' && (
+          <button className="card tint blue-1" onClick={() => onOpen('alertas')}>
+            <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>⚠️</span>
+            <div className="code">Admin</div><h2>Alertas de Calidad</h2>
           </button>
         )}
         <button className="card tint blue-2" onClick={() => onOpen('fichas')}>
