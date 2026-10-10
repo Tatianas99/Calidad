@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode } from 'react'
+import { forwardRef, useLayoutEffect, useRef, type ReactNode } from 'react'
 import './alerta.css'
 
 export type Defecto = { titulo: string; detalle: string; estado: 'nuevo' | 'sigue' }
@@ -37,10 +37,8 @@ function conNegritas(txt: string): ReactNode[] {
 
 // Los textos largos se achican para que no se salgan de la tarjeta.
 const tamTitulo = (t: string) => (t.length <= 24 ? 50 : t.length <= 32 ? 42 : t.length <= 40 ? 34 : 28)
-const tamReporte = (t: string, nDef: number) => {
-  const largo = t.length + nDef * 45
-  return largo <= 150 ? 21 : largo <= 230 ? 19 : 17
-}
+const REPORTE_MAX = 25
+const REPORTE_MIN = 16
 
 const IcoAlerta = () => (
   <svg viewBox="0 0 24 24" fill="#16294A"><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z" /></svg>
@@ -58,6 +56,17 @@ const AlertaImagen = forwardRef<HTMLDivElement, { datos: AlertaDatos; foto: stri
     const defectos = a.defectos.filter((d) => d.titulo.trim())
     const acciones = a.acciones.filter((x) => x.trim())
     const compacto = defectos.length >= 3
+    const cardRef = useRef<HTMLDivElement>(null)
+    const quoteRef = useRef<HTMLParagraphElement>(null)
+    // El reporte arranca grande y se achica solo hasta que la tarjeta no se desborde.
+    useLayoutEffect(() => {
+      const card = cardRef.current, q = quoteRef.current
+      if (!card || !q) return
+      for (let t = REPORTE_MAX; t >= REPORTE_MIN; t--) {
+        q.style.fontSize = t + 'px'
+        if (card.scrollHeight <= card.clientHeight) break
+      }
+    })
     return (
       <div className="ac-img" ref={ref} style={style}>
         <div className="ac-header">
@@ -87,9 +96,9 @@ const AlertaImagen = forwardRef<HTMLDivElement, { datos: AlertaDatos; foto: stri
               {foto ? <img src={foto} alt="" /> : <div className="ac-nofoto">Sin foto</div>}
               {foto && <div className="ac-cap">📷 Evidencia del cliente</div>}
             </div>
-            <div className="ac-card">
+            <div className="ac-card" ref={cardRef}>
               <div className="ac-lbl">Lo que reporta el cliente</div>
-              <p className="ac-quote" style={{ fontSize: tamReporte(a.reporte, defectos.length) }}>{conNegritas(a.reporte)}</p>
+              <p className="ac-quote" ref={quoteRef}>{conNegritas(a.reporte)}</p>
               {defectos.length > 0 && (
                 <div className="ac-defs" style={compacto ? { marginTop: 14, gap: 8 } : undefined}>
                   {defectos.map((d, i) => (

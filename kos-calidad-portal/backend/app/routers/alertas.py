@@ -103,8 +103,8 @@ def _aplicar(a: models.AlertaCalidad, data: AlertaIn, db: Session) -> None:
         t = d.titulo.strip()
         if t:
             estado = d.estado if d.estado in ESTADOS_DEFECTO else "nuevo"
-            defectos.append({"titulo": t[:80], "detalle": d.detalle.strip()[:120], "estado": estado})
-    acciones = [x.strip()[:140] for x in data.acciones[:3] if x.strip()]
+            defectos.append({"titulo": t[:120], "detalle": d.detalle.strip()[:200], "estado": estado})
+    acciones = [x.strip()[:300] for x in data.acciones[:3] if x.strip()]
 
     a.numero = data.numero
     a.fecha = data.fecha
