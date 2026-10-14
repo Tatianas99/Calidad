@@ -358,6 +358,12 @@ class AlertaCalidad(Base):
     impacto: Mapped[Optional[str]] = mapped_column(String(500))
     defectos: Mapped[str] = mapped_column(String(4000), default="[]")     # [{titulo, detalle, estado}]
     acciones: Mapped[str] = mapped_column(String(2000), default="[]")     # [str]
+    # Presentación de la imagen (se guardan para reproducir la alerta igual):
+    # tamaño de la letra del reporte y encuadre de la foto (posición % y zoom).
+    font_reporte: Mapped[int] = mapped_column(Integer, default=25)
+    foto_x: Mapped[int] = mapped_column(Integer, default=50)
+    foto_y: Mapped[int] = mapped_column(Integer, default=50)
+    foto_zoom: Mapped[float] = mapped_column(Float, default=1.0)
     # Trazabilidad interna: no se imprime en la imagen.
     cliente: Mapped[Optional[str]] = mapped_column(String(160))
     op_lote: Mapped[Optional[str]] = mapped_column(String(80))

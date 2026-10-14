@@ -125,6 +125,13 @@ def init_db():
     # La referencia ahora se trae de la OP como texto; la FK vieja queda anulable.
     _make_nullable("f006_registro", "referencia_id", "INT")
     _make_nullable("f204_registro", "referencia_id", "INT")
+    # Alertas de Calidad: presentación guardada (tamaño de letra y encuadre de foto).
+    _ensure_columns("alerta_calidad", [
+        ("font_reporte", "INTEGER NOT NULL DEFAULT 25", "INT NOT NULL DEFAULT 25"),
+        ("foto_x", "INTEGER NOT NULL DEFAULT 50", "INT NOT NULL DEFAULT 50"),
+        ("foto_y", "INTEGER NOT NULL DEFAULT 50", "INT NOT NULL DEFAULT 50"),
+        ("foto_zoom", "FLOAT NOT NULL DEFAULT 1", "FLOAT NOT NULL DEFAULT 1"),
+    ])
 
 
 def _ensure_columns(tabla: str, columnas: list[tuple[str, str, str]]):

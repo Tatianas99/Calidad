@@ -16,6 +16,11 @@ export type AlertaDatos = {
   acciones: string[]
   cliente: string
   op_lote: string
+  // Presentación guardada (tamaño de letra del reporte y encuadre de la foto).
+  font_reporte: number
+  foto_x: number
+  foto_y: number
+  foto_zoom: number
 }
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']

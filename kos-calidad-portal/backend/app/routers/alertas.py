@@ -54,6 +54,11 @@ class AlertaIn(BaseModel):
     acciones: list[str] = []
     cliente: Optional[str] = None
     op_lote: Optional[str] = None
+    # Presentación guardada de la imagen.
+    font_reporte: int = 25           # tamaño de la letra del reporte
+    foto_x: int = 50                 # posición horizontal del encuadre (%)
+    foto_y: int = 50                 # posición vertical del encuadre (%)
+    foto_zoom: float = 1.0           # acercamiento de la foto
 
 
 class FotoIn(BaseModel):
@@ -82,6 +87,10 @@ def _out(a: models.AlertaCalidad) -> dict:
         "acciones": json.loads(a.acciones or "[]"),
         "cliente": a.cliente,
         "op_lote": a.op_lote,
+        "font_reporte": a.font_reporte if a.font_reporte is not None else 25,
+        "foto_x": a.foto_x if a.foto_x is not None else 50,
+        "foto_y": a.foto_y if a.foto_y is not None else 50,
+        "foto_zoom": a.foto_zoom if a.foto_zoom is not None else 1.0,
         "tiene_foto": bool(a.foto_ruta),
         "creado_por": a.creado_por,
         "creado_en": a.creado_en.isoformat() if a.creado_en else None,
@@ -119,6 +128,11 @@ def _aplicar(a: models.AlertaCalidad, data: AlertaIn, db: Session) -> None:
     a.acciones = json.dumps(acciones, ensure_ascii=False)
     a.cliente = _limpio(data.cliente)
     a.op_lote = _limpio(data.op_lote)
+    # Presentación (con límites de seguridad).
+    a.font_reporte = max(12, min(48, int(data.font_reporte or 25)))
+    a.foto_x = max(0, min(100, int(data.foto_x if data.foto_x is not None else 50)))
+    a.foto_y = max(0, min(100, int(data.foto_y if data.foto_y is not None else 50)))
+    a.foto_zoom = max(1.0, min(4.0, float(data.foto_zoom or 1.0)))
 
 
 def _buscar(db: Session, alerta_id: int) -> models.AlertaCalidad:
