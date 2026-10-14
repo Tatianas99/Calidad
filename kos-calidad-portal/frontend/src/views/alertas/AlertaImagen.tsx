@@ -37,8 +37,11 @@ function conNegritas(txt: string): ReactNode[] {
 
 // Los textos largos se achican para que no se salgan de la tarjeta.
 const tamTitulo = (t: string) => (t.length <= 24 ? 50 : t.length <= 32 ? 42 : t.length <= 40 ? 34 : 28)
-const REPORTE_MAX = 25
-const REPORTE_MIN = 16
+// Tamaño mínimo de seguridad del reporte: el usuario elige un tamaño preferido
+// (fontPref) y solo se achica por debajo si el texto no cabe en la tarjeta.
+const REPORTE_MIN = 12
+
+export type Encuadre = { x: number; y: number; zoom: number }  // % horizontal/vertical y acercamiento de la foto
 
 const IcoAlerta = () => (
   <svg viewBox="0 0 24 24" fill="#16294A"><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z" /></svg>
@@ -51,18 +54,20 @@ const IcoNuevo = () => (
 )
 
 /** La pieza gráfica de 1080×1080 que se descarga como PNG. */
-const AlertaImagen = forwardRef<HTMLDivElement, { datos: AlertaDatos; foto: string | null; style?: React.CSSProperties }>(
-  function AlertaImagen({ datos: a, foto, style }, ref) {
+const AlertaImagen = forwardRef<HTMLDivElement, { datos: AlertaDatos; foto: string | null; fontPref?: number; encuadre?: Encuadre; style?: React.CSSProperties }>(
+  function AlertaImagen({ datos: a, foto, fontPref = 25, encuadre, style }, ref) {
     const defectos = a.defectos.filter((d) => d.titulo.trim())
     const acciones = a.acciones.filter((x) => x.trim())
     const compacto = defectos.length >= 3
+    const enc = encuadre ?? { x: 50, y: 50, zoom: 1 }
     const cardRef = useRef<HTMLDivElement>(null)
     const quoteRef = useRef<HTMLParagraphElement>(null)
-    // El reporte arranca grande y se achica solo hasta que la tarjeta no se desborde.
+    // El reporte arranca en el tamaño elegido (fontPref) y solo se achica si no
+    // cabe en la tarjeta, nunca por debajo de REPORTE_MIN.
     useLayoutEffect(() => {
       const card = cardRef.current, q = quoteRef.current
       if (!card || !q) return
-      for (let t = REPORTE_MAX; t >= REPORTE_MIN; t--) {
+      for (let t = fontPref; t >= REPORTE_MIN; t--) {
         q.style.fontSize = t + 'px'
         if (card.scrollHeight <= card.clientHeight) break
       }
@@ -86,14 +91,16 @@ const AlertaImagen = forwardRef<HTMLDivElement, { datos: AlertaDatos; foto: stri
             <span className={'ac-sev' + (a.etiqueta === 'NUEVO' ? ' nuevo' : '')}>{a.etiqueta}</span>
             <span className="ac-sub">
               {a.producto || 'Producto'}
-              {a.codigo.trim() && <> &nbsp;·&nbsp; Código: {a.codigo}</>}
+              {a.codigo.trim() && <> &nbsp;·&nbsp; Marca: {a.codigo}</>}
             </span>
           </div>
           <h2 style={{ fontSize: tamTitulo(a.titulo) }}>{a.titulo || 'Defecto principal'}</h2>
 
           <div className="ac-grid">
             <div className="ac-photo">
-              {foto ? <img src={foto} alt="" /> : <div className="ac-nofoto">Sin foto</div>}
+              {foto
+                ? <img src={foto} alt="" style={{ objectPosition: `${enc.x}% ${enc.y}%`, transform: `scale(${enc.zoom})`, transformOrigin: `${enc.x}% ${enc.y}%` }} />
+                : <div className="ac-nofoto">Sin foto</div>}
               {foto && <div className="ac-cap">📷 Evidencia del cliente</div>}
             </div>
             <div className="ac-card" ref={cardRef}>
@@ -113,7 +120,6 @@ const AlertaImagen = forwardRef<HTMLDivElement, { datos: AlertaDatos; foto: stri
                   ))}
                 </div>
               )}
-              {a.impacto.trim() && <div className="ac-imp"><b>Impacto:</b> {a.impacto}</div>}
             </div>
           </div>
 

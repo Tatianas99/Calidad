@@ -6,7 +6,7 @@ import { matchKeywords } from '../../lib/fuzzy'
 import type { Referencia } from '../../lib/types'
 import { Field } from '../../components/Field'
 import ReferenceSearch from '../../components/ReferenceSearch'
-import AlertaImagen, { fechaLarga, numeroTxt, type AlertaDatos, type Defecto } from './AlertaImagen'
+import AlertaImagen, { fechaLarga, numeroTxt, type AlertaDatos, type Defecto, type Encuadre } from './AlertaImagen'
 
 type Alerta = Omit<AlertaDatos, 'codigo' | 'area' | 'impacto' | 'cliente' | 'op_lote'> & {
   id: number
@@ -177,6 +177,9 @@ function Editor({ inicial, alertas, onSalir }: {
   const imgRef = useRef<HTMLDivElement>(null)
   const cajaRef = useRef<HTMLDivElement>(null)
   const [escala, setEscala] = useState(0.45)
+  // Ajustes de presentación (no se guardan: quedan "horneados" en el PNG al descargar).
+  const [fontPref, setFontPref] = useState(25)          // tamaño de la letra del reporte
+  const [encuadre, setEncuadre] = useState<Encuadre>({ x: 50, y: 50, zoom: 1 })  // recorte de la foto
 
   // La foto guardada llega después de abrir el editor (se descarga aparte).
   useEffect(() => { if (!fotoNueva && inicial.foto) setFoto(inicial.foto) }, [inicial.foto]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -206,7 +209,7 @@ function Editor({ inicial, alertas, onSalir }: {
 
   async function elegirFoto(file?: File) {
     if (!file) return
-    try { setFoto(await procesarFoto(file)); setFotoNueva(true); setCambios(true) } catch { window.alert('No se pudo leer la imagen') }
+    try { setFoto(await procesarFoto(file)); setFotoNueva(true); setCambios(true); setEncuadre({ x: 50, y: 50, zoom: 1 }) } catch { window.alert('No se pudo leer la imagen') }
   }
 
   async function guardar(): Promise<boolean> {
@@ -288,16 +291,16 @@ function Editor({ inicial, alertas, onSalir }: {
 
           <div className="panel">
             <h3>Producto y defecto</h3>
-            <Field label="Buscar en referencias" hint="llena producto y código">
+            <Field label="Buscar en referencias" hint="llena el producto">
               <ReferenceSearch referencias={refs} onChange={(rid) => {
                 const r = refs.find((x) => x.id === rid)
-                if (r) setD((x) => ({ ...x, producto: r.descripcion || r.codigo, codigo: r.descripcion ? r.codigo : x.codigo }))
+                if (r) setD((x) => ({ ...x, producto: r.descripcion || r.codigo }))
                 setCambios(true)
               }} freeText="" onFreeText={(t) => set('producto', t)} />
             </Field>
             <div className="row">
               <Field label="Producto"><input value={d.producto} onChange={(e) => set('producto', e.target.value)} placeholder="Ej: Vaso 7 oz blanco" /></Field>
-              <Field label="Código" hint="opcional"><input value={d.codigo} onChange={(e) => set('codigo', e.target.value)} /></Field>
+              <Field label="Marca" hint="opcional"><input value={d.codigo} onChange={(e) => set('codigo', e.target.value)} placeholder="Ej: Dlolita" /></Field>
             </div>
             <Field label="Defecto principal (titular)">
               <input value={d.titulo} onChange={(e) => set('titulo', e.target.value)} placeholder="Ej: Vaso con tapa picada" />
@@ -319,10 +322,17 @@ function Editor({ inicial, alertas, onSalir }: {
 
           <div className="panel">
             <h3>Reclamo</h3>
-            <Field label="Lo que reporta el cliente" hint="*texto* = negrita">
-              <textarea rows={3} value={d.reporte} onChange={(e) => set('reporte', e.target.value)}
+            <Field label="Lo que reporta el cliente" hint="*texto* = negrita · Enter = nuevo renglón">
+              <textarea rows={6} value={d.reporte} onChange={(e) => set('reporte', e.target.value)}
                 placeholder="Ej: Problemas *dispensando los vasos 7 oz en máquinas vending*: el vaso no cae o se atasca." />
             </Field>
+            <div className="ac-fontctl">
+              <span>Tamaño de la letra del reporte</span>
+              <button type="button" className="btn btn-ghost pill-btn" title="Más pequeña" onClick={() => setFontPref((f) => Math.max(14, f - 2))}>A−</button>
+              <b style={{ minWidth: 26, textAlign: 'center' }}>{fontPref}</b>
+              <button type="button" className="btn btn-ghost pill-btn" title="Más grande" onClick={() => setFontPref((f) => Math.min(40, f + 2))}>A+</button>
+              {fontPref !== 25 && <button type="button" className="btn btn-ghost" style={{ fontSize: '.8rem' }} onClick={() => setFontPref(25)}>Restablecer</button>}
+            </div>
             <label style={{ fontWeight: 600, display: 'block', margin: '6px 0 8px' }}>Defectos detallados <span className="hint">· hasta 3</span></label>
             {d.defectos.map((x, i) => {
               const pv = x.titulo.trim() ? previas(x.titulo) : []
@@ -345,17 +355,23 @@ function Editor({ inicial, alertas, onSalir }: {
             {d.defectos.length < 3 && (
               <button type="button" className="btn btn-ghost" onClick={() => set('defectos', [...d.defectos, { ...DEF_VACIO }])}>➕ Agregar defecto</button>
             )}
-            <div style={{ marginTop: 12 }}>
-              <Field label="Impacto" hint="opcional">
-                <input value={d.impacto} onChange={(e) => set('impacto', e.target.value)} placeholder="Ej: el cliente no puede dispensar en sus máquinas vending" />
-              </Field>
-            </div>
           </div>
 
           <div className="panel">
             <h3>Foto de evidencia</h3>
             <input type="file" accept="image/*" onChange={(e) => elegirFoto(e.target.files?.[0])} />
-            {foto && <p className="muted" style={{ fontSize: '.82rem' }}>La foto se recorta al cuadro de la imagen. Usa una foto donde el defecto esté centrado.</p>}
+            {foto && (
+              <div className="ac-encuadre">
+                <p className="muted" style={{ fontSize: '.82rem', margin: '10px 0 8px' }}>Ajusta el encuadre para que quede centrado lo que quieres mostrar. Se aplica a la imagen que descargas.</p>
+                <label className="ac-slider"><span>Acercar</span>
+                  <input type="range" min={1} max={3} step={0.05} value={encuadre.zoom} onChange={(e) => setEncuadre((v) => ({ ...v, zoom: Number(e.target.value) }))} /></label>
+                <label className="ac-slider"><span>Mover ↔</span>
+                  <input type="range" min={0} max={100} value={encuadre.x} onChange={(e) => setEncuadre((v) => ({ ...v, x: Number(e.target.value) }))} /></label>
+                <label className="ac-slider"><span>Mover ↕</span>
+                  <input type="range" min={0} max={100} value={encuadre.y} onChange={(e) => setEncuadre((v) => ({ ...v, y: Number(e.target.value) }))} /></label>
+                <button type="button" className="btn btn-ghost" style={{ fontSize: '.8rem', marginTop: 4 }} onClick={() => setEncuadre({ x: 50, y: 50, zoom: 1 })}>Centrar</button>
+              </div>
+            )}
           </div>
 
           <div className="panel">
@@ -378,7 +394,7 @@ function Editor({ inicial, alertas, onSalir }: {
 
         <div className="ac-preview">
           <div className="ac-scale" ref={cajaRef}>
-            <AlertaImagen ref={imgRef} datos={datosImg} foto={foto} style={{ transform: `scale(${escala})` }} />
+            <AlertaImagen ref={imgRef} datos={datosImg} foto={foto} fontPref={fontPref} encuadre={encuadre} style={{ transform: `scale(${escala})` }} />
           </div>
           <div className="btn-row" style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={guardar} disabled={guardando}>{guardando ? 'Guardando…' : cambios || id === null ? '💾 Guardar' : '✓ Guardada'}</button>
