@@ -45,6 +45,9 @@ type Producto = {
   finalizado?: boolean
   embalaje: Record<string, string>
   filtraciones: LocalFiltracion[]
+  // Config de montaje PROPIA de este producto (tipo de prueba / papel / 90°C):
+  // cada item recuerda la suya, no se comparte entre productos.
+  filtDef?: FiltDef
   operario?: string    // buscar o escribir
   empacador?: string   // buscar o escribir
   empacador2?: string  // 2° empacador (opcional; a veces hay más de 2 personas)
@@ -90,13 +93,6 @@ export default function F006Form({
   const stRef = useRef(st)
   stRef.current = st
   const embTimers = useRef<Record<string, number>>({})
-
-  // Tipo de prueba y papel elegidos para montar: se recuerdan entre productos y
-  // al salir/volver del portal (borrador persistente por usuario), no solo dentro
-  // del producto actual. La cantidad NO se recuerda (es propia de cada prueba).
-  const [filtDef, setFiltDef] = useDraft<{ tp: string; tm: string; temp90: string }>(
-    'f006_filt_def_v1', { tp: '', tm: '', temp90: '' },
-  )
 
   useEffect(() => {
     apiGet<Referencia[]>('/catalogos/referencias').then(setRefs).catch(() => {})
@@ -178,6 +174,19 @@ export default function F006Form({
     setSt((s) => ({ ...s, productos: s.productos.map((p) => (p.registroId === id ? fn(p) : p)) }))
   const patchProd = (id: string, patch: Partial<Producto>) => mapProd(id, (p) => ({ ...p, ...patch }))
 
+  // Config de montaje efectiva de un producto: su propia selección (filtDef) y,
+  // si aún no eligió, la hereda de su última prueba montada (así la siguiente
+  // prueba del MISMO item sigue con los mismos parámetros).
+  const EMPTY_FILTDEF: FiltDef = { tp: '', tm: '', temp90: '' }
+  const configDe = (p: Producto): FiltDef => {
+    if (p.filtDef && (p.filtDef.tp || p.filtDef.tm)) return p.filtDef
+    const ult = p.filtraciones.find((f) => !f.maquina_parada && f.tipo_prueba)
+    if (ult) return { tp: ult.tipo_prueba, tm: ult.tipo_material, temp90: ult.temp_90 ?? '' }
+    return EMPTY_FILTDEF
+  }
+  const configValida = (c: FiltDef) => !!(c.tp && c.tm) && !(c.tp === 'cafe_caliente' && !c.temp90)
+  const esActivo = (p: Producto) => !!(p.referencia_texto || '').trim() && !!p.maquina && !p.finalizado
+
   const selected = st.productos.find((p) => p.registroId === st.seleccionadoId)
 
   function agregarProducto() {
@@ -257,19 +266,22 @@ export default function F006Form({
     feedback(!r.ok)
   }
 
-  // Montaje masivo: una prueba en cada producto activo con la configuración
-  // predeterminada (tipo de prueba y papel ya elegidos), SIN cantidad de muestra
-  // (se pide al registrar el resultado). Requiere que ya exista esa configuración.
+  // Montaje masivo: una prueba en cada producto activo, usando la configuración
+  // PROPIA de cada producto (tipo de prueba / papel / 90°C que se eligió en ese
+  // item), SIN cantidad de muestra (se pide al registrar el resultado). Los
+  // productos que aún no tienen configuración se omiten.
   async function montarMasivo() {
-    const { tp, tm, temp90 } = filtDef
-    if (!tp || !tm) { flash('Primero monta una prueba para fijar el tipo de prueba y papel'); return }
-    const activos = stRef.current.productos.filter((p) => (p.referencia_texto || '').trim() && !!p.maquina)
+    const activos = stRef.current.productos.filter(esActivo)
     if (activos.length === 0) { flash('No hay productos con referencia y máquina en el turno'); return }
-    for (const p of activos) {
+    const conConfig = activos.filter((p) => configValida(configDe(p)))
+    if (conConfig.length === 0) { flash('Ningún producto tiene configurado el tipo de prueba y papel'); return }
+    for (const p of conConfig) {
       if (!p.guardado) await maybeGuardarCabecera(p)
-      await montarFiltracion(p.registroId, tp, tm, null, temp90)
+      const c = configDe(p)
+      await montarFiltracion(p.registroId, c.tp, c.tm, null, c.temp90)
     }
-    flash(`Montadas ${activos.length} prueba(s). Falta la cantidad de muestra: se pide al registrar.`)
+    const omitidos = activos.length - conConfig.length
+    flash(`Montadas ${conConfig.length} prueba(s)${omitidos ? ` · ${omitidos} sin configurar (omitido)` : ''}. Falta la muestra: se pide al registrar.`)
   }
 
   // Marca como "Máquina parada" una prueba ya montada (p. ej. una masiva) al registrarla.
@@ -356,7 +368,8 @@ export default function F006Form({
     .sort((a, b) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime())
 
   const admin = getUser()?.rol === 'admin'
-  const hayConfig = !!(filtDef.tp && filtDef.tm)
+  // El masivo se habilita si al menos un producto activo ya tiene su config.
+  const hayConfig = st.productos.some((p) => esActivo(p) && configValida(configDe(p)))
 
   return (
     <div>
@@ -371,8 +384,8 @@ export default function F006Form({
             className="btn btn-primary" style={{ marginLeft: 'auto', minHeight: 38 }}
             disabled={!hayConfig}
             title={hayConfig
-              ? 'Monta una prueba en cada producto activo del turno con el tipo de prueba y papel ya elegidos'
-              : 'Primero monta una prueba (así se fija el tipo de prueba y papel)'}
+              ? 'Monta una prueba en cada producto activo usando la configuración elegida en cada uno'
+              : 'Primero elige el tipo de prueba y papel en algún producto'}
             onClick={montarMasivo}
           >
             ⚡ Montar pruebas masivamente
@@ -472,8 +485,10 @@ export default function F006Form({
               onParada={(f, com) => registrarParadaExistente(selected.registroId, f, com)}
               onFirmas={(patch) => patchProd(selected.registroId, patch)}
               onFinalizar={() => finalizarProducto(selected.registroId)}
-              filtDef={filtDef}
-              setFiltDef={setFiltDef}
+              filtDef={configDe(selected)}
+              setFiltDef={(updater) => mapProd(selected.registroId, (p) => ({
+                ...p, filtDef: typeof updater === 'function' ? updater(configDe(p)) : updater,
+              }))}
             />
           )}
         </section>
@@ -660,7 +675,8 @@ function ProductoDetalle({
 
 function NuevaFiltracion({ opts, onMontar, onMontarParada, filtDef, setFiltDef }: { opts: Opciones; onMontar: (tp: string, tm: string, c: number, temp90: string) => void; onMontarParada: () => void; filtDef: FiltDef; setFiltDef: SetFiltDef }) {
   const [cant, setCant] = useState('')  // la cantidad es propia de cada prueba (no se recuerda)
-  // Tipo de prueba, papel y temperatura se recuerdan entre productos y sesiones.
+  // Tipo de prueba, papel y temperatura se recuerdan por ESTE producto (no se
+  // comparten con otros): el filtDef que llega ya es el del producto actual.
   const { tp, tm, temp90 } = filtDef
   const setTp = (v: string) => setFiltDef((d) => ({ ...d, tp: v, temp90: v !== 'cafe_caliente' ? '' : d.temp90 }))
   const setTm = (v: string) => setFiltDef((d) => ({ ...d, tm: v }))
