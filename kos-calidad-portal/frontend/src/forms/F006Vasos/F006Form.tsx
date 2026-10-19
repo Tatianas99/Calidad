@@ -367,7 +367,6 @@ export default function F006Form({
     .filter((r) => r.registrado_por_id === miUsuarioId && (r.operario_nombre || r.empacador_nombre) && dentro8h(r.creado_en))
     .sort((a, b) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime())
 
-  const admin = getUser()?.rol === 'admin'
   // El masivo se habilita si al menos un producto activo ya tiene su config.
   const hayConfig = st.productos.some((p) => esActivo(p) && configValida(configDe(p)))
 
@@ -379,18 +378,16 @@ export default function F006Form({
       <div className="section-title">
         <span className="code">F-006</span>
         <h2>Ruta control proceso vasos — Turno</h2>
-        {admin && (
-          <button
-            className="btn btn-primary" style={{ marginLeft: 'auto', minHeight: 38 }}
-            disabled={!hayConfig}
-            title={hayConfig
-              ? 'Monta una prueba en cada producto activo usando la configuración elegida en cada uno'
-              : 'Primero elige el tipo de prueba y papel en algún producto'}
-            onClick={montarMasivo}
-          >
-            ⚡ Montar pruebas masivamente
-          </button>
-        )}
+        <button
+          className="btn btn-primary" style={{ marginLeft: 'auto', minHeight: 38 }}
+          disabled={!hayConfig}
+          title={hayConfig
+            ? 'Monta una prueba en cada producto activo usando la configuración elegida en cada uno'
+            : 'Primero elige el tipo de prueba y papel en algún producto'}
+          onClick={montarMasivo}
+        >
+          ⚡ Montar pruebas masivamente
+        </button>
       </div>
 
       <div className="f006-layout">
