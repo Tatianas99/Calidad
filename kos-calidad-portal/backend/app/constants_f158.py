@@ -80,7 +80,6 @@ PROCESOS_F158 = [
             _calibre(),
             _c("prueba_lapiz", "Prueba de lápiz"),
             _c("medidas", "Medidas"),
-            _c("prueba_armado", "Prueba de armado"),
             _c("medicion_positivo", "Medición de positivo"),
             _c("inocuidad", "Inocuidad"),
         ],
