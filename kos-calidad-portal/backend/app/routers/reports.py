@@ -26,6 +26,7 @@ def reporte_pdf(
     desde: Optional[datetime] = Query(None, description="Inicio del rango (fecha y hora)"),
     hasta: Optional[datetime] = Query(None, description="Fin del rango (fecha y hora)"),
     op: Optional[str] = Query(None, description="Orden de producción (solo F-006)"),
+    proceso: Optional[str] = Query(None, description="Proceso a filtrar (solo F-158, por rango de fecha)"),
     user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -62,7 +63,9 @@ def reporte_pdf(
             raise HTTPException(status_code=400, detail="Indica el rango de fechas")
         if hasta < desde:
             raise HTTPException(status_code=400, detail="El rango de fechas es inválido")
-        pdf = build_report_pdf(formato, desde, hasta, user.nombre, db)
+        # El filtro por proceso solo aplica a F-158; los demás formatos lo ignoran.
+        proc = proceso.strip() if (formato == "f158" and proceso and proceso.strip()) else None
+        pdf = build_report_pdf(formato, desde, hasta, user.nombre, db, proceso=proc)
         nombre = f"reporte_{formato}_{desde:%Y%m%d-%H%M}_{hasta:%Y%m%d-%H%M}.pdf"
 
     return StreamingResponse(

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { apiBaseUrl } from '../lib/api'
+import { useEffect, useState } from 'react'
+import { apiBaseUrl, apiGet } from '../lib/api'
 import { getToken } from '../lib/auth'
 
 // Valor para <input type="datetime-local"> (hora local, sin zona).
@@ -18,27 +18,40 @@ export default function PdfExport({ formato }: { formato: string }) {
   const [hasta, setHasta] = useState(isoLocal(new Date()))
   const [modo, setModo] = useState<'fecha' | 'op'>('fecha')  // solo F-006 usa 'op'
   const [op, setOp] = useState('')
+  const [proceso, setProceso] = useState('')  // '' = todos (solo F-158)
+  const [procesos, setProcesos] = useState<{ key: string; label: string }[]>([])
   const [bajando, setBajando] = useState(false)
   const [error, setError] = useState('')
 
   const admiteOp = formato === 'f006' || formato === 'f158'  // reporte por OP
   const porOp = admiteOp && modo === 'op'
+  const admiteProceso = formato === 'f158'  // filtro por proceso (solo por rango de fecha)
+
+  // Carga los procesos de F-158 para poder filtrar el reporte por proceso.
+  useEffect(() => {
+    if (!admiteProceso) return
+    apiGet<{ procesos: { key: string; label: string }[] }>('/f158/config')
+      .then((c) => setProcesos(c.procesos || []))
+      .catch(() => {})
+  }, [admiteProceso])
 
   async function descargar() {
     setError('')
     if (porOp && !op.trim()) { setError('Escribe el número de OP'); return }
     setBajando(true)
     try {
+      const procParam = admiteProceso && proceso ? `&proceso=${encodeURIComponent(proceso)}` : ''
       const url = porOp
         ? `${apiBaseUrl()}/reports/pdf/${formato}?op=${encodeURIComponent(op.trim())}`
-        : `${apiBaseUrl()}/reports/pdf/${formato}?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`
+        : `${apiBaseUrl()}/reports/pdf/${formato}?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}${procParam}`
       const res = await fetch(url, { headers: { Authorization: `Bearer ${getToken()}` } })
       if (res.status === 404) throw new Error(porOp ? 'No hay registros para esa OP' : 'No se pudo generar el PDF')
       if (!res.ok) throw new Error('No se pudo generar el PDF')
       const blob = await res.blob()
+      const procTxt = admiteProceso && proceso ? '_' + (procesos.find((p) => p.key === proceso)?.label || proceso) : ''
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
-      a.download = porOp ? `reporte_${formato}_OP-${op.trim()}.pdf` : `reporte_${formato}.pdf`
+      a.download = porOp ? `reporte_${formato}_OP-${op.trim()}.pdf` : `reporte_${formato}${procTxt}.pdf`
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(a.href), 2000)
       setOpen(false)
@@ -88,6 +101,14 @@ export default function PdfExport({ formato }: { formato: string }) {
                   <label className="pdf-field">Hasta
                     <input type="datetime-local" value={hasta} min={desde} onChange={(e) => setHasta(e.target.value)} />
                   </label>
+                  {admiteProceso && (
+                    <label className="pdf-field">Proceso
+                      <select value={proceso} onChange={(e) => setProceso(e.target.value)}>
+                        <option value="">Todos los procesos</option>
+                        {procesos.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+                      </select>
+                    </label>
+                  )}
                 </>
               )}
 

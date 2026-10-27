@@ -65,7 +65,7 @@ def _page(canvas, doc):
     canvas.restoreState()
 
 
-def _encabezado(titulo, desde, hasta, usuario, op=None):
+def _encabezado(titulo, desde, hasta, usuario, op=None, proceso_label=None):
     fd = _dt(desde); fh = _dt(hasta)
     txt = [Paragraph(_esc(titulo), _S["titulo"])]
     if op:
@@ -73,6 +73,8 @@ def _encabezado(titulo, desde, hasta, usuario, op=None):
         txt.append(Paragraph(f"Uso de la OP: {fd[0]} {fd[1]} &nbsp;→&nbsp; {fh[0]} {fh[1]}", _S["sub"]))
     else:
         txt.append(Paragraph(f"Rango: {fd[0]} {fd[1]} &nbsp;→&nbsp; {fh[0]} {fh[1]}", _S["sub"]))
+    if proceso_label:
+        txt.append(Paragraph(f"Proceso: <b>{_esc(proceso_label)}</b>", _S["sub"]))
     txt.append(Paragraph(f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} · {_esc(usuario)}", _S["sub"]))
     cell = [txt]
     if _LOGO.exists():
@@ -264,7 +266,7 @@ def _f006(db, desde, hasta, op=None):
 
 
 # ------------------------------- F-158 ------------------------------------- #
-def _f158(db, desde, hasta, op=None):
+def _f158(db, desde, hasta, op=None, proceso=None):
     from .routers.turnos import cargar_horarios, turno_de
     horarios = cargar_horarios(db)
     q = (db.query(models.F158Recorrido)
@@ -275,6 +277,8 @@ def _f158(db, desde, hasta, op=None):
         q = q.filter(models.F158Recorrido.id.in_(ids)) if ids else q.filter(models.F158Recorrido.id == "__none__")
     else:
         q = q.filter(models.F158Recorrido.fecha_hora >= desde, models.F158Recorrido.fecha_hora <= hasta)
+        if proceso:  # filtro opcional por proceso (p. ej. solo "Formación")
+            q = q.filter(models.F158Recorrido.proceso == proceso)
     regs = q.order_by(models.F158Recorrido.fecha_hora).all()
     header = ["Fecha", "Hora", "Proceso", "Máquina", "OP", "Referencia", "Responsable", "C", "NC"]
     rows, detalles = [], []
@@ -431,18 +435,20 @@ def _f005(db, desde, hasta):
 _FORMATOS = {"f005": _f005, "f006": _f006, "f015": _f015, "f158": _f158, "f204": _f204}
 
 
-def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: str, db, op=None) -> bytes:
+def build_report_pdf(formato: str, desde: datetime, hasta: datetime, usuario: str, db, op=None, proceso=None) -> bytes:
     # F-006 y F-158 admiten filtro por OP; los demás formatos ignoran `op`.
+    # F-158 además admite filtro por proceso (solo por rango de fecha).
     if formato == "f006":
         spec = _f006(db, desde, hasta, op)
     elif formato == "f158":
-        spec = _f158(db, desde, hasta, op)
+        spec = _f158(db, desde, hasta, op, proceso)
     else:
         spec = _FORMATOS[formato](db, desde, hasta)
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
                             topMargin=13 * mm, bottomMargin=15 * mm, title=f"Reporte {formato.upper()}")
-    story = _encabezado(spec["titulo"], desde, hasta, usuario, op=op)
+    proc_label = PROCESO_LABEL.get(proceso, proceso) if proceso else None
+    story = _encabezado(spec["titulo"], desde, hasta, usuario, op=op, proceso_label=proc_label)
     if spec["kpis"]:
         story.append(Paragraph(" &nbsp;·&nbsp; ".join(_esc(k) for k in spec["kpis"]), _S["kpi"]))
         story.append(Spacer(1, 6))
