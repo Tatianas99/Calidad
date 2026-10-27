@@ -156,6 +156,29 @@ PROCESOS_F158 = [
         ],
     },
     {
+        "key": "doble_pared",
+        "label": "Doble Pared",
+        # Máquinas fijas de Doble Pared (no dependen de la tabla `maquinas`).
+        "maquinas": ["DP 12 OZ", "DP 7 OZ", "DP 9 OZ"],
+        # Igual que Formación pero sin "Sin pestaña vending", "Ajuste tapa",
+        # "Asa (resistencia y pegue)" ni "Calibre asa"; y "Despegue manual" se
+        # renombra a "Despegue manual Doble pared" (misma clave para el histórico).
+        "campos": [
+            _t("op", "Orden de producción"),
+            _ref(),
+            _t("no_caja", "N° caja"),
+            _c("identificacion_caja", "Hojilla en caja vs Rótulo"),
+            _c("unidad_empaque", "Unidad empaque"),
+            _c("despegue_manual", "Despegue manual Doble pared"),
+            _c("impresion", "Impresión"),
+            _c("pestana_reborde", "Pestaña en el reborde"),
+            _c("sticker_bolsa", "Sticker bolsa"),
+            _c("rotulo", "Rótulo"),
+            _c("sellado_bolsa", "Sellado bolsa"),
+            _c("dp_punto_hotmelt", "DP punto hotmelt"),
+        ],
+    },
+    {
         "key": "anillos",
         "label": "Anillos",
         "maquinas": [],
