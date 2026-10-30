@@ -105,6 +105,8 @@ export type F158Campo = {
   opciones?: string[]
   otro?: boolean
   gate?: boolean          // pregunta filtro: si no se responde la 1ª opción, el resto no aplica
+  solo_maquinas?: string[]    // el campo aparece SOLO para estas máquinas
+  ocultar_maquinas?: string[] // el campo se oculta para estas máquinas
 }
 export type F158Proceso = {
   key: string
@@ -112,6 +114,7 @@ export type F158Proceso = {
   maquinas: string[]
   campos: F158Campo[]
   nota?: string
+  solo_admin?: boolean    // proceso visible solo para admin
 }
 export type F158Config = {
   procesos: F158Proceso[]

@@ -36,8 +36,17 @@ def _t(key, label):
     return {"key": key, "label": label, "tipo": "texto"}
 
 
-def _c(key, label):
-    return {"key": key, "label": label, "tipo": "cncna"}
+def _c(key, label, solo_maquinas=None, ocultar_maquinas=None):
+    """Campo C/NC/NA. Opcionalmente condicionado por la máquina elegida:
+    `solo_maquinas` -> el campo aparece SOLO para esas máquinas;
+    `ocultar_maquinas` -> el campo se oculta para esas máquinas.
+    El frontend filtra según la máquina (afecta validación y guardado)."""
+    d = {"key": key, "label": label, "tipo": "cncna"}
+    if solo_maquinas:
+        d["solo_maquinas"] = list(solo_maquinas)
+    if ocultar_maquinas:
+        d["ocultar_maquinas"] = list(ocultar_maquinas)
+    return d
 
 
 def _ref(key="referencia", label="Referencia"):
@@ -144,15 +153,10 @@ PROCESOS_F158 = [
             _c("unidad_empaque", "Unidad empaque"),
             _c("despegue_manual", "Despegue manual"),
             _c("impresion", "Impresión"),
-            _c("pestana_reborde", "Pestaña en el reborde"),
-            _c("sin_pestana_vending", "Sin pestaña vending"),
-            _c("ajuste_tapa", "Ajuste tapa"),
+            _c("reborde_bien_formado", "Reborde bien formado"),
             _c("sticker_bolsa", "Sticker bolsa"),
             _c("rotulo", "Rótulo"),
             _c("sellado_bolsa", "Sellado bolsa"),
-            _c("dp_punto_hotmelt", "DP punto hotmelt"),
-            _c("asa_resistencia_pegue", "Asa (resistencia y pegue)"),
-            _calibre_asa(),
         ],
     },
     {
@@ -179,8 +183,33 @@ PROCESOS_F158 = [
         ],
     },
     {
+        "key": "maquina_asas",
+        "label": "Maquina Asas",
+        # Sin selección de máquina. Igual que Formación pero sin "Ajuste tapa",
+        # "DP punto hotmelt", "Sin pestaña vending" ni "Pestaña en el reborde";
+        # y con "Reborde bien formado" (conserva Asa y Calibre asa).
+        "maquinas": [],
+        "campos": [
+            _t("op", "Orden de producción"),
+            _ref(),
+            _t("no_caja", "N° caja"),
+            _c("identificacion_caja", "Hojilla en caja vs Rótulo"),
+            _c("unidad_empaque", "Unidad empaque"),
+            _c("despegue_manual", "Despegue manual"),
+            _c("impresion", "Impresión"),
+            _c("reborde_bien_formado", "Reborde bien formado"),
+            _c("sticker_bolsa", "Sticker bolsa"),
+            _c("rotulo", "Rótulo"),
+            _c("sellado_bolsa", "Sellado bolsa"),
+            _c("asa_resistencia_pegue", "Asa (resistencia y pegue)"),
+            _calibre_asa(),
+        ],
+    },
+    {
         "key": "anillos",
         "label": "Anillos",
+        # Inhabilitado para usuarios normales: solo visible para admin.
+        "solo_admin": True,
         "maquinas": [],
         "campos": [
             _t("op", "Orden de producción"),
@@ -203,8 +232,12 @@ PROCESOS_F158 = [
             _c("sticker_bolsa", "Sticker bolsa"),
             _c("sellado_bolsa", "Sellado bolsa"),
             _c("identificacion_caja", "Identificación caja"),
-            _c("corte_perforacion", "Corte perforación"),
-            _c("pegue_tapa_papel", "Pegue tapa papel"),
+            # Impresión solo para Papel 1 / Papel 2.
+            _c("impresion", "Impresión", solo_maquinas=["Papel 1", "Papel 2"]),
+            # Corte perforación se oculta en Papel 1 / Papel 2.
+            _c("corte_perforacion", "Corte perforación", ocultar_maquinas=["Papel 1", "Papel 2"]),
+            # Pegue tapa papel se oculta en Termo 1 / Termo 2.
+            _c("pegue_tapa_papel", "Pegue tapa papel", ocultar_maquinas=["Termo 1", "Termo 2"]),
             _c("medicion_ajuste", "Medición (ajuste)"),
             _c("inocuidad", "Inocuidad"),
             _c("tapa_centrada", "Tapa centrada"),

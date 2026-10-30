@@ -100,11 +100,21 @@ function gateCerrado(proceso: F158Proceso, e: Entrada): boolean {
   return !!v && v !== (g.opciones?.[0] ?? 'Sí')
 }
 
-// Campos que se muestran y se guardan: todos, o solo la pregunta filtro si se
-// respondió que no están trabajando.
+// ¿El campo aplica para la máquina elegida? Un campo con `solo_maquinas` aparece
+// únicamente para esas máquinas; uno con `ocultar_maquinas` se esconde en esas.
+// Sin máquina elegida, los campos con `solo_maquinas` quedan ocultos.
+function campoAplicaMaquina(c: F158Campo, maquina?: string): boolean {
+  if (c.solo_maquinas?.length && !(maquina && c.solo_maquinas.includes(maquina))) return false
+  if (c.ocultar_maquinas?.length && maquina && c.ocultar_maquinas.includes(maquina)) return false
+  return true
+}
+
+// Campos que se muestran y se guardan: todos los que apliquen a la máquina
+// elegida, o solo la pregunta filtro si se respondió que no están trabajando.
 function camposVisibles(proceso: F158Proceso, e: Entrada): F158Campo[] {
   const g = gateDe(proceso)
-  return g && gateCerrado(proceso, e) ? [g] : proceso.campos
+  if (g && gateCerrado(proceso, e)) return [g]
+  return proceso.campos.filter((c) => campoAplicaMaquina(c, e.maquina))
 }
 
 function faltantesDe(proceso: F158Proceso, e: Entrada): string[] {
@@ -394,7 +404,7 @@ export default function F158Form({
             <div className="panel">
               <h3 style={{ marginTop: 0 }}>¿Qué proceso vas a revisar?</h3>
               <div className="proc-grid">
-                {config.procesos.map((p) => (
+                {config.procesos.filter((p) => admin || !p.solo_admin).map((p) => (
                   <button key={p.key} className="proc-btn" onClick={() => upd({ proceso: p.key, maquina: undefined, vals: {}, otros: {}, refIds: {}, prodTextos: {}, marcas: {} })}>
                     {p.label}
                   </button>

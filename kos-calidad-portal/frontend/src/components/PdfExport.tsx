@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiBaseUrl, apiGet } from '../lib/api'
-import { getToken } from '../lib/auth'
+import { getToken, getUser } from '../lib/auth'
 
 // Valor para <input type="datetime-local"> (hora local, sin zona).
 const isoLocal = (d: Date) => {
@@ -26,14 +26,16 @@ export default function PdfExport({ formato }: { formato: string }) {
   const admiteOp = formato === 'f006' || formato === 'f158'  // reporte por OP
   const porOp = admiteOp && modo === 'op'
   const admiteProceso = formato === 'f158'  // filtro por proceso (solo por rango de fecha)
+  const admin = getUser()?.rol === 'admin'
 
   // Carga los procesos de F-158 para poder filtrar el reporte por proceso.
+  // Los procesos solo-admin (p. ej. Anillos) se ocultan a usuarios normales.
   useEffect(() => {
     if (!admiteProceso) return
-    apiGet<{ procesos: { key: string; label: string }[] }>('/f158/config')
-      .then((c) => setProcesos(c.procesos || []))
+    apiGet<{ procesos: { key: string; label: string; solo_admin?: boolean }[] }>('/f158/config')
+      .then((c) => setProcesos((c.procesos || []).filter((p) => admin || !p.solo_admin)))
       .catch(() => {})
-  }, [admiteProceso])
+  }, [admiteProceso, admin])
 
   async function descargar() {
     setError('')
