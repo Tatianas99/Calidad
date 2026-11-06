@@ -98,6 +98,7 @@ PROCESOS_F158 = [
         "label": "Flexo",
         "maquinas": ["Flexo 1", "Flexo 2"],
         "campos": [
+            _gate("trabajando", "¿El proceso está trabajando?"),
             _t("op", "Orden de producción"),
             _ref(),
             _calibre(),
@@ -129,7 +130,7 @@ PROCESOS_F158 = [
     {
         "key": "troquelado",
         "label": "Troqueladora",
-        "maquinas": ["Punching 1", "Punching 2", "Punching 3", "Punching 4", "Troqueladora China"],
+        "maquinas": ["Punching 1", "Punching 2", "Punching 3", "Punching 4", "Troqueladora China", "Troqueladora de quijada"],
         "campos": [
             _t("op", "Orden de producción"),
             _ref(),
