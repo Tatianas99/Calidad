@@ -17,9 +17,11 @@ import Configuracion from './views/Configuracion'
 import Dashboard from './views/Dashboard'
 import FichasTecnicas from './views/FichasTecnicas'
 import AlertasCalidad from './views/alertas/AlertasCalidad'
+import EstandarizacionForm from './forms/Estandarizacion/EstandarizacionForm'
+import RegistrosEstandarizacion from './views/RegistrosEstandarizacion'
 import { CupsIcon, WaterTestIcon, BadgeIcon, TrashIcon, RollIcon } from './components/FormIcons'
 
-type View = 'home' | 'dashboard' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config' | 'fichas' | 'alertas'
+type View = 'home' | 'dashboard' | 'f005' | 'f006' | 'f015' | 'f158' | 'f204' | 'reportes' | 'reg005' | 'reg006' | 'reg015' | 'reg158' | 'reg204' | 'config' | 'fichas' | 'alertas' | 'estand' | 'regEstand'
 
 export default function App() {
   const [user, setUser] = useState<Usuario | null>(getUser())
@@ -85,9 +87,10 @@ export default function App() {
       <NavItem label="📐 Fichas técnicas" active={view === 'fichas'} onClick={() => irA('fichas')} />
       <a className="nav-item" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📋 Portal de PQRS ↗</a>
       <a className="nav-item" href="https://evaluacionlinea-b5hchxhvcucvdpac.canadacentral-01.azurewebsites.net/admin/limpiezas" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>🛡️ Portal SGIA ↗</a>
+      <NavItem label="🔬 Estandarización" active={view === 'estand'} onClick={() => irA('estand')} />
 
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
-      {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204'].includes(view)} onClick={() => irA('reportes')} />}
+      {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204', 'regEstand'].includes(view)} onClick={() => irA('reportes')} />}
 
       {(hasPermiso('gestionar_usuarios') || hasPermiso('gestionar_catalogos') || user.rol === 'admin') && <div className="nav-sec">Administración</div>}
       {user.rol === 'admin' && <NavItem label="⚠️ Alertas de Calidad" active={view === 'alertas'} onClick={() => irA('alertas')} />}
@@ -126,6 +129,8 @@ export default function App() {
           {view === 'config' && <Configuracion />}
           {view === 'fichas' && <FichasTecnicas />}
           {view === 'alertas' && user.rol === 'admin' && <AlertasCalidad />}
+          {view === 'estand' && <EstandarizacionForm onExit={() => setView('home')} onVerRegistros={() => setView('regEstand')} />}
+          {view === 'regEstand' && <RegistrosEstandarizacion onBack={() => setView('reportes')} />}
         </main>
       </div>
     </div>
@@ -163,6 +168,10 @@ function Reportes({ onOpen }: { onOpen: (v: View) => void }) {
         <button className="card tint blue-1" onClick={() => onOpen('reg204')}>
           <TrashIcon className="card-icon" />
           <div className="code">F-204</div><h2>Clase B y desperdicio</h2>
+        </button>
+        <button className="card tint blue-2" onClick={() => onOpen('regEstand')}>
+          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🔬</span>
+          <div className="code">Estand.</div><h2>Estandarización</h2>
         </button>
       </div>
     </div>
@@ -223,6 +232,10 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
           <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🛡️</span>
           <div className="code">SGIA ↗</div><h2>Portal SGIA</h2>
         </a>
+        <button className="card tint blue-2" onClick={() => onOpen('estand')}>
+          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🔬</span>
+          <div className="code">Nuevo</div><h2>Estandarización</h2>
+        </button>
       </div>
     </div>
   )

@@ -205,3 +205,42 @@ export type F158RecorridoResumen = {
   c_count: number
   nc_count: number
 }
+
+// --------------------------------------------------------------------------- //
+// Estandarización — monitoreo de variables de máquina
+// --------------------------------------------------------------------------- //
+export type EstConfig = { maquinas: string[]; calibres: string[]; tipos_papel: string[] }
+export type EstAdjunto = { id: number; nombre: string; tipo: string; categoria: string; url: string }
+export type EstRegistro = {
+  id: string
+  maquina?: string | null
+  orden_produccion?: string | null
+  referencia_texto?: string | null
+  marca?: string | null
+  calibre?: string | null
+  proveedor_papel?: string | null
+  tipo_papel?: string | null
+  tipo_humectacion?: string | null
+  calidad_vaso?: string | null
+  h1?: string | null; h2?: string | null; h3?: string | null
+  h4?: string | null; h5?: string | null; h6?: string | null
+  observaciones?: string | null
+  responsable_id?: number | null
+  responsable_nombre?: string | null
+  fecha: string
+  fecha_hora: string
+  creado_en: string
+  actualizado_en?: string | null
+  adjuntos: EstAdjunto[]
+}
+export type EstResumen = {
+  id: string
+  fecha_hora: string
+  maquina?: string | null
+  orden_produccion?: string | null
+  referencia_texto?: string | null
+  marca?: string | null
+  calibre?: string | null
+  tipo_papel?: string | null
+  responsable_nombre?: string | null
+}

@@ -599,6 +599,13 @@ textarea { min-height: 70px; resize: vertical; }
 :root[data-theme="dark"] .maq-box { background: #1e2f4a; border-color: #2f4d7a; }
 :root[data-theme="dark"] .maq-title { color: #bfdbfe; }
 
+/* Resistencias del tablero (H1..H6): grilla compacta de celdas numéricas. */
+.est-hgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.est-hcell { display: flex; flex-direction: column; gap: 4px; }
+.est-hcell span { font-weight: 700; font-size: .85rem; color: var(--muted); }
+.est-hcell input { text-align: center; font-size: 1.1rem; font-weight: 700; }
+@media (max-width: 520px) { .est-hgrid { grid-template-columns: repeat(2, 1fr); } }
+
 /* Acciones (editar/borrar) en las tablas de registros. */
 .row-actions { display: flex; gap: 4px; justify-content: flex-end; }
 .act-icon {

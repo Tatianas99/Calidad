@@ -242,6 +242,58 @@ class F158Adjunto(Base):
 
 
 # --------------------------------------------------------------------------- #
+# Estandarización — monitoreo de variables de máquina (proyecto de patrones).
+# Cada registro captura máquina, OP/referencia/marca, calibre, papel, humectación,
+# calidad del vaso y las 6 resistencias del tablero (H1..H6). Queda con el usuario
+# que lo registró y la hora exacta (como los demás formatos). Las fotos (tablero y
+# calidad del vaso) van en estandarizacion_adjunto.
+# --------------------------------------------------------------------------- #
+class Estandarizacion(Base):
+    __tablename__ = "estandarizacion"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    maquina: Mapped[Optional[str]] = mapped_column(String(80))
+    orden_produccion: Mapped[Optional[str]] = mapped_column(String(40))
+    referencia_texto: Mapped[Optional[str]] = mapped_column(String(200))  # traída de la OP
+    marca: Mapped[Optional[str]] = mapped_column(String(80))
+    calibre: Mapped[Optional[str]] = mapped_column(String(20))
+    proveedor_papel: Mapped[Optional[str]] = mapped_column(String(120))
+    tipo_papel: Mapped[Optional[str]] = mapped_column(String(20))         # P1|P2|PS|…
+    tipo_humectacion: Mapped[Optional[str]] = mapped_column(String(200))  # texto libre
+    calidad_vaso: Mapped[Optional[str]] = mapped_column(String(600))      # texto libre
+    # Resistencias del tablero (H1..H6). Texto para admitir decimales/unidades.
+    h1: Mapped[Optional[str]] = mapped_column(String(12))
+    h2: Mapped[Optional[str]] = mapped_column(String(12))
+    h3: Mapped[Optional[str]] = mapped_column(String(12))
+    h4: Mapped[Optional[str]] = mapped_column(String(12))
+    h5: Mapped[Optional[str]] = mapped_column(String(12))
+    h6: Mapped[Optional[str]] = mapped_column(String(12))
+    observaciones: Mapped[Optional[str]] = mapped_column(String(4000))
+    responsable_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
+    responsable_nombre: Mapped[Optional[str]] = mapped_column(String(120))
+    fecha: Mapped[date] = mapped_column(Date, nullable=False)
+    fecha_hora: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+    actualizado_en: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    adjuntos: Mapped[List["EstandarizacionAdjunto"]] = relationship(
+        back_populates="registro", cascade="all, delete-orphan"
+    )
+
+
+class EstandarizacionAdjunto(Base):
+    __tablename__ = "estandarizacion_adjunto"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    estandarizacion_id: Mapped[str] = mapped_column(ForeignKey("estandarizacion.id"), nullable=False)
+    nombre: Mapped[str] = mapped_column(String(200), nullable=False)
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False)       # image|video
+    categoria: Mapped[str] = mapped_column(String(20), default="vaso")  # tablero|vaso
+    ruta: Mapped[str] = mapped_column(String(300), nullable=False)
+    creado_en: Mapped[datetime] = mapped_column(DateTime, default=now_co)
+
+    registro: Mapped["Estandarizacion"] = relationship(back_populates="adjuntos")
+
+
+# --------------------------------------------------------------------------- #
 # F-204 — Entrega de producto por turno (clase B / verificación de desperdicio)
 # --------------------------------------------------------------------------- #
 class F204Registro(Base):

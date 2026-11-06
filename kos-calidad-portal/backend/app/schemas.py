@@ -313,6 +313,72 @@ class F158RecorridoResumen(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Estandarización — monitoreo de variables de máquina
+# --------------------------------------------------------------------------- #
+class EstAdjuntoOut(BaseModel):
+    id: int
+    nombre: str
+    tipo: str
+    categoria: str = "vaso"  # tablero | vaso
+    url: str = ""            # se completa en el router con la ruta pública
+    model_config = ConfigDict(from_attributes=True)
+
+
+class _EstBase(BaseModel):
+    maquina: Optional[str] = None
+    orden_produccion: Optional[str] = None
+    referencia_texto: Optional[str] = None
+    marca: Optional[str] = None
+    calibre: Optional[str] = None
+    proveedor_papel: Optional[str] = None
+    tipo_papel: Optional[str] = None
+    tipo_humectacion: Optional[str] = None
+    calidad_vaso: Optional[str] = None
+    h1: Optional[str] = None
+    h2: Optional[str] = None
+    h3: Optional[str] = None
+    h4: Optional[str] = None
+    h5: Optional[str] = None
+    h6: Optional[str] = None
+    observaciones: Optional[str] = None
+
+
+class EstandarizacionCreate(_EstBase):
+    id: Optional[str] = None       # UUID del cliente (idempotencia)
+    fecha: Optional[date] = None   # solo admin puede fijar fecha manual
+
+
+class EstandarizacionUpdate(_EstBase):
+    pass
+
+
+class EstandarizacionOut(_EstBase):
+    id: str
+    responsable_id: Optional[int] = None
+    responsable_nombre: Optional[str] = None
+    fecha: date
+    fecha_hora: datetime
+    creado_en: datetime
+    actualizado_en: Optional[datetime] = None
+    adjuntos: List[EstAdjuntoOut] = []
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EstandarizacionResumen(BaseModel):
+    """Fila liviana para "Ver registros" (sin fotos; se piden al abrir la fila)."""
+    id: str
+    fecha_hora: datetime
+    maquina: Optional[str] = None
+    orden_produccion: Optional[str] = None
+    referencia_texto: Optional[str] = None
+    marca: Optional[str] = None
+    calibre: Optional[str] = None
+    tipo_papel: Optional[str] = None
+    responsable_nombre: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------------------------------------------------------- #
 # F-204 — Entrega de producto por turno
 # --------------------------------------------------------------------------- #
 class F204RegistroCreate(BaseModel):
