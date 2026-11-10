@@ -12,7 +12,7 @@ from fastapi import Depends
 from . import storage
 from .config import CORS_ORIGINS, UPLOADS_DIR
 from .db import init_db, SessionLocal
-from .auth import get_current_user
+from .auth import get_current_user, require_admin
 from .personal import sync_personas
 from .referencias_sync import sync_referencias
 from .maquinas_sync import sync_maquinas
@@ -91,7 +91,7 @@ app.include_router(f006.router, dependencies=_auth)
 app.include_router(f015.router, dependencies=_auth)
 app.include_router(f158.router, dependencies=_auth)
 app.include_router(f204.router, dependencies=_auth)
-app.include_router(estandarizacion.router, dependencies=_auth)
+app.include_router(estandarizacion.router, dependencies=[Depends(require_admin)])  # Estandarización: solo admin
 app.include_router(reports.router, dependencies=_auth)
 app.include_router(dashboard.router, dependencies=_auth)
 app.include_router(borradores.router, dependencies=_auth)

@@ -87,7 +87,7 @@ export default function App() {
       <NavItem label="📐 Fichas técnicas" active={view === 'fichas'} onClick={() => irA('fichas')} />
       <a className="nav-item" href="https://pqrs.kosxpress.com/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>📋 Portal de PQRS ↗</a>
       <a className="nav-item" href="https://evaluacionlinea-b5hchxhvcucvdpac.canadacentral-01.azurewebsites.net/admin/limpiezas" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>🛡️ Portal SGIA ↗</a>
-      <NavItem label="🔬 Estandarización" active={view === 'estand'} onClick={() => irA('estand')} />
+      {user.rol === 'admin' && <NavItem label="🔬 Estandarización" active={view === 'estand'} onClick={() => irA('estand')} />}
 
       {hasPermiso('ver_registros') && <div className="nav-sec">Consultar</div>}
       {hasPermiso('ver_registros') && <NavItem label="Ver reportes" active={['reportes', 'reg005', 'reg006', 'reg015', 'reg158', 'reg204', 'regEstand'].includes(view)} onClick={() => irA('reportes')} />}
@@ -129,8 +129,8 @@ export default function App() {
           {view === 'config' && <Configuracion />}
           {view === 'fichas' && <FichasTecnicas />}
           {view === 'alertas' && user.rol === 'admin' && <AlertasCalidad />}
-          {view === 'estand' && <EstandarizacionForm onExit={() => setView('home')} onVerRegistros={() => setView('regEstand')} />}
-          {view === 'regEstand' && <RegistrosEstandarizacion onBack={() => setView('reportes')} />}
+          {view === 'estand' && user.rol === 'admin' && <EstandarizacionForm onExit={() => setView('home')} onVerRegistros={() => setView('regEstand')} />}
+          {view === 'regEstand' && user.rol === 'admin' && <RegistrosEstandarizacion onBack={() => setView('reportes')} />}
         </main>
       </div>
     </div>
@@ -169,10 +169,12 @@ function Reportes({ onOpen }: { onOpen: (v: View) => void }) {
           <TrashIcon className="card-icon" />
           <div className="code">F-204</div><h2>Clase B y desperdicio</h2>
         </button>
-        <button className="card tint blue-2" onClick={() => onOpen('regEstand')}>
-          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🔬</span>
-          <div className="code">Estand.</div><h2>Estandarización</h2>
-        </button>
+        {getUser()?.rol === 'admin' && (
+          <button className="card tint blue-2" onClick={() => onOpen('regEstand')}>
+            <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🔬</span>
+            <div className="code">Estand.</div><h2>Estandarización</h2>
+          </button>
+        )}
       </div>
     </div>
   )
@@ -232,10 +234,12 @@ function Home({ onOpen }: { onOpen: (v: View) => void }) {
           <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🛡️</span>
           <div className="code">SGIA ↗</div><h2>Portal SGIA</h2>
         </a>
-        <button className="card tint blue-2" onClick={() => onOpen('estand')}>
-          <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🔬</span>
-          <div className="code">Nuevo</div><h2>Estandarización</h2>
-        </button>
+        {getUser()?.rol === 'admin' && (
+          <button className="card tint blue-2" onClick={() => onOpen('estand')}>
+            <span className="card-icon" style={{ fontSize: 26, lineHeight: '32px' }}>🔬</span>
+            <div className="code">Nuevo</div><h2>Estandarización</h2>
+          </button>
+        )}
       </div>
     </div>
   )
