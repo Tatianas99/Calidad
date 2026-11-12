@@ -5,7 +5,7 @@
 export type BarItem = { label: string; value: number; valueText?: string; sub?: string }
 
 // Lista de barras horizontales (magnitud / ranking). `color` = tono de la marca.
-export function BarList({ items, color = '#3b82f6', empty = 'Sin datos en el periodo.' }: {
+export function BarList({ items, color = '#009FE3', empty = 'Sin datos en el periodo.' }: {
   items: BarItem[]
   color?: string
   empty?: string
@@ -178,7 +178,7 @@ export function Composicion({ items }: { items: { label: string; value: number }
 }
 
 // Matriz proceso × turno (cobertura / NC) con celdas sombreadas por magnitud.
-export function Matriz({ turnos, filas, color = '#3b82f6' }: {
+export function Matriz({ turnos, filas, color = '#009FE3' }: {
   turnos: string[]
   filas: { proceso: string; valores: number[]; total: number }[]
   color?: string

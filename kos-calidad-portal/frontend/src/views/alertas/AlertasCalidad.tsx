@@ -145,7 +145,7 @@ export default function AlertasCalidad() {
                   <td style={{ whiteSpace: 'nowrap' }}>{fechaLarga(a.fecha)}</td>
                   <td>{a.producto}{a.codigo && <div className="muted" style={{ fontSize: '.74rem' }}>{a.codigo}</div>}</td>
                   <td>{a.titulo}{a.cliente && <div className="muted" style={{ fontSize: '.74rem' }}>Cliente: {a.cliente}</div>}</td>
-                  <td><span style={{ fontWeight: 700, fontSize: '.78rem', color: a.etiqueta === 'REINCIDENTE' ? 'var(--bad)' : 'var(--brand)' }}>{a.etiqueta}</span></td>
+                  <td><span style={{ fontWeight: 700, fontSize: '.78rem', color: a.etiqueta === 'REINCIDENTE' ? 'var(--bad)' : 'var(--brand-text)' }}>{a.etiqueta}</span></td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button className="btn btn-ghost pill-btn" title="Abrir / editar" onClick={() => abrir(a)}>✏️</button>
                     <button className="btn btn-ghost pill-btn" title="Duplicar como nueva alerta (reincidencia)" onClick={() => duplicar(a)}>📄</button>
