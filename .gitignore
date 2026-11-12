@@ -57,3 +57,12 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 .DS_Store
+
+# --- Proyectos con repositorio propio ----------------------
+/PQRS portal/
+
+# --- Piezas de comunicación (imágenes/videos sueltos en la raíz)
+/*.png
+/*.svg
+/*.mp4
+/instructivo-montaje-masivo/
