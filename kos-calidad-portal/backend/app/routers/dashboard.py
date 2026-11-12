@@ -14,7 +14,8 @@ from datetime import date, datetime, time
 from typing import Optional
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
 
 from ..db import get_db
 from .. import models
@@ -100,19 +101,33 @@ def dashboard(
         return f"{base} {marca}".strip() if marca else base
 
     # ---------------- Filtración (F-006): % NC ---------------- #
+    # Los totales por registro (no cumple / muestra) los suma la base de datos en una
+    # sola consulta; antes se traían TODAS las filtraciones una a una (miles de filas
+    # sin índice) y era lo que hacía lento el dashboard.
+    F6 = models.F006Filtracion
+    tot6 = (
+        db.query(
+            F6.registro_id.label("rid"),
+            func.coalesce(func.sum(F6.cantidad_nocumple), 0).label("nc"),
+            func.coalesce(func.sum(F6.cantidad_muestra), 0).label("mu"),
+        )
+        .group_by(F6.registro_id)
+        .subquery()
+    )
     f6 = _rango(
-        db.query(models.F006Registro).options(selectinload(models.F006Registro.filtraciones)),
+        db.query(models.F006Registro, tot6.c.nc, tot6.c.mu)
+        .outerjoin(tot6, tot6.c.rid == models.F006Registro.id),
         models.F006Registro.fecha,
     ).all()
     if tokens:
-        f6 = [r for r in f6 if _match(tokens, f"{r.orden_produccion or ''} {ref_nombre(r)}")]
+        f6 = [t for t in f6 if _match(tokens, f"{t[0].orden_produccion or ''} {ref_nombre(t[0])}")]
     nc_turno, mu_turno = {}, {}
     nc_maq, mu_maq = {}, {}
     nc_ref, mu_ref = {}, {}
     nc_dia, mu_dia = {}, {}
-    for r in f6:
-        nc = sum((f.cantidad_nocumple or 0) for f in r.filtraciones)
-        mu = sum((f.cantidad_muestra or 0) for f in r.filtraciones)
+    for r, nc_sum, mu_sum in f6:
+        nc = int(nc_sum or 0)
+        mu = int(mu_sum or 0)
         if mu == 0:
             continue
         kt, km, kr = turno_label(r.turno), maq_nombre(r), ref_nombre(r)
@@ -192,25 +207,51 @@ def dashboard(
     }
 
     # ---------------- Rutas Calidad (F-158) ---------------- #
+    # Igual que en F-006: la base entrega el conteo de ítems NC por recorrido ya
+    # sumado, en vez de cargar las decenas de miles de ítems para contarlos aquí.
+    I158 = models.F158Item
+    nc158 = (
+        db.query(I158.recorrido_id.label("rid"), func.count(I158.id).label("nc"))
+        .filter(I158.tipo == "cncna", I158.valor == "NC")
+        .group_by(I158.recorrido_id)
+        .subquery()
+    )
     f158 = _rango(
-        db.query(models.F158Recorrido).options(selectinload(models.F158Recorrido.items)),
+        db.query(models.F158Recorrido, nc158.c.nc)
+        .outerjoin(nc158, nc158.c.rid == models.F158Recorrido.id),
         models.F158Recorrido.fecha,
     ).all()
     if tokens:
-        def _texto158(r):
-            op = next((it.valor for it in r.items if it.campo_key == "op" and it.valor), "")
-            ref = next((it.valor for it in r.items if it.tipo == "referencia" and it.valor), "")
-            return f"{op} {ref}"
-        f158 = [r for r in f158 if _match(tokens, _texto158(r))]
+        # Para buscar por OP/referencia solo se leen esos dos campos (no todos los
+        # ítems), y solo de los recorridos del rango pedido.
+        ids158 = {t[0].id for t in f158}
+        op158, ref158 = {}, {}
+        filas_txt = _rango(
+            db.query(I158.recorrido_id, I158.campo_key, I158.tipo, I158.valor)
+            .join(models.F158Recorrido, models.F158Recorrido.id == I158.recorrido_id)
+            .filter(or_(I158.campo_key == "op", I158.tipo == "referencia"))
+            .filter(I158.valor.isnot(None), I158.valor != ""),
+            models.F158Recorrido.fecha,
+        ).order_by(I158.id).all()
+        for rid, campo_key, tipo, valor in filas_txt:
+            if rid not in ids158:
+                continue
+            if campo_key == "op":
+                op158.setdefault(rid, valor)       # el primero con valor, como antes
+            if tipo == "referencia":
+                ref158.setdefault(rid, valor)
+        f158 = [
+            t for t in f158
+            if _match(tokens, f"{op158.get(t[0].id, '')} {ref158.get(t[0].id, '')}")
+        ]
     turnos = [turno_label(1), turno_label(2), turno_label(3)]
     cob = {}   # proceso -> [t1,t2,t3]
     ncp = {}   # proceso -> [t1,t2,t3]
-    for r in f158:
+    for r, nc_items in f158:
         proc = PROCESO_LABEL.get(r.proceso, r.proceso)
         ti = turno_de(r.fecha_hora, horarios) - 1
         cob.setdefault(proc, [0, 0, 0])[ti] += 1
-        nc_items = sum(1 for it in r.items if it.tipo == "cncna" and it.valor == "NC")
-        ncp.setdefault(proc, [0, 0, 0])[ti] += nc_items
+        ncp.setdefault(proc, [0, 0, 0])[ti] += int(nc_items or 0)
 
     def _matriz(d):
         filas = [
